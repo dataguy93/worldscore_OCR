@@ -15,7 +15,7 @@ from pathlib import Path
 # -----------------------------
 # CONFIG YOU MUST SET ONCE
 # -----------------------------
-IMAGE_PATH = "Users/daltonstout/Documents/project with willis perry/scorecard pictures/scorecard.jpeg"
+IMAGE_PATH = "/Users/daltonstout/Documents/project with willis perry/scorecard pictures/scorecard.jpeg"
 
 # Coordinates for the rectangle containing the score GRID only:
 # (x, y, width, height) in pixels.
