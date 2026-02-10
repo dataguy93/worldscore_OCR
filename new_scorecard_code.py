@@ -76,7 +76,7 @@ def extract_scores_from_image(
     if tesseract_cmd:
         pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
-    img = cv2.imread('/Users/daltonstout/Documents/project with willis perry/scorecard pictures/scorecard.jpeg')
+    img = cv2.imread(image_path)
     if img is None:
         raise FileNotFoundError(f"Could not read image: {image_path}")
 
