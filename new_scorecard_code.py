@@ -6,23 +6,21 @@ Created on Mon Feb  9 13:09:45 2026
 @author: daltonstout
 """
 
-"""
-scorecard_ocr.py
-
-Extract handwritten hole scores from a golf scorecard photo.
-
-Dependencies:
-  pip install opencv-python pytesseract numpy
-
-System dependency (Tesseract OCR engine):
-  - macOS (brew): brew install tesseract
-  - Ubuntu: sudo apt-get install tesseract-ocr
-
-Usage (CLI):
-  python scorecard_ocr.py /path/to/scorecard.jpeg --debug_dir ./debug
-"""
-
 from __future__ import annotations
+
+# scorecard_ocr.py
+#
+# Extract handwritten hole scores from a golf scorecard photo.
+#
+# Dependencies:
+#   pip install opencv-python pytesseract numpy
+#
+# System dependency (Tesseract OCR engine):
+#   - macOS (brew): brew install tesseract
+#   - Ubuntu: sudo apt-get install tesseract-ocr
+#
+# Usage (CLI):
+#   python scorecard_ocr.py /path/to/scorecard.jpeg --debug_dir ./debug
 
 import os
 import json
@@ -76,7 +74,9 @@ def extract_scores_from_image(
     if tesseract_cmd:
         pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
-    img = cv2.imread('/Users/daltonstout/Documents/project with willis perry/scorecard pictures/scorecard.jpeg')
+    # Read the image supplied by the caller/CLI.
+    # A previous hard-coded local path made OCR silently run on the wrong file.
+    img = cv2.imread(image_path)
     if img is None:
         raise FileNotFoundError(f"Could not read image: {image_path}")
 
@@ -485,31 +485,53 @@ def _ocr_handwritten_digit(warped: np.ndarray, bbox: Tuple[int, int, int, int]) 
     gray = cv2.cvtColor(cell, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (3, 3), 0)
 
-    # Invert + binarize: handwriting becomes white on black for OCR robustness
-    bw = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 21, 8
-    )
+    # Try a few preprocess variants. Handwriting quality and lighting can vary a lot,
+    # so a single threshold strategy often misses digits entirely.
+    preprocess_variants = [
+        cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 8
+        ),
+        cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 21, 8
+        ),
+        cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1],
+        cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1],
+    ]
 
-    # Remove printed grid remnants by eroding a bit (tune as needed)
-    bw = cv2.morphologyEx(bw, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8), iterations=1)
+    tesseract_configs = [
+        "--oem 1 --psm 10 -c tessedit_char_whitelist=0123456789",
+        "--oem 1 --psm 8 -c tessedit_char_whitelist=0123456789",
+    ]
 
-    # Enlarge for OCR
-    bw = cv2.resize(bw, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+    best_raw = ""
+    best_num: Optional[int] = None
 
-    config = "--oem 1 --psm 8 -c tessedit_char_whitelist=0123456789"
-    text = pytesseract.image_to_string(bw, config=config).strip()
+    for variant in preprocess_variants:
+        # Light denoising: remove tiny specks while keeping most stroke content.
+        cleaned_variant = cv2.morphologyEx(
+            variant, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8), iterations=1
+        )
+        enlarged = cv2.resize(cleaned_variant, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
 
-    # Clean common OCR noise
-    cleaned = "".join(ch for ch in text if ch.isdigit())
+        for config in tesseract_configs:
+            raw = pytesseract.image_to_string(enlarged, config=config).strip()
+            digits = "".join(ch for ch in raw if ch.isdigit())
+            if not digits:
+                continue
 
-    parsed: Optional[int] = None
-    if cleaned:
-        try:
-            parsed = int(cleaned)
-        except ValueError:
-            parsed = None
+            try:
+                value = int(digits)
+            except ValueError:
+                continue
 
-    return text, parsed
+            if 1 <= value <= 20:
+                return raw, value
+
+            if best_num is None:
+                best_raw = raw
+                best_num = value
+
+    return best_raw, best_num
 
 
 # ----------------------------
