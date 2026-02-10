@@ -6,8 +6,6 @@ Created on Mon Feb  9 13:09:45 2026
 @author: daltonstout
 """
 
-from __future__ import annotations
-
 # scorecard_ocr.py
 #
 # Extract handwritten hole scores from a golf scorecard photo.
@@ -24,7 +22,6 @@ from __future__ import annotations
 
 import os
 import json
-from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import cv2
@@ -36,20 +33,32 @@ import pytesseract
 # Data structures (app-friendly)
 # ----------------------------
 
-@dataclass
 class CellOCR:
-    hole: int
-    score: Optional[int]
-    raw_text: str
-    bbox: Tuple[int, int, int, int]  # x, y, w, h
+    def __init__(
+        self,
+        hole: int,
+        score: Optional[int],
+        raw_text: str,
+        bbox: Tuple[int, int, int, int],
+    ) -> None:
+        self.hole = hole
+        self.score = score
+        self.raw_text = raw_text
+        self.bbox = bbox  # x, y, w, h
 
 
-@dataclass
 class ScorecardResult:
-    holes: Dict[int, Optional[int]]          # {1: 4, 2: 5, ...}
-    cells: List[CellOCR]                     # detailed per-cell debug
-    warped_size: Tuple[int, int]             # (w, h)
-    confidence_notes: List[str]              # warnings / hints
+    def __init__(
+        self,
+        holes: Dict[int, Optional[int]],
+        cells: List[CellOCR],
+        warped_size: Tuple[int, int],
+        confidence_notes: List[str],
+    ) -> None:
+        self.holes = holes
+        self.cells = cells
+        self.warped_size = warped_size
+        self.confidence_notes = confidence_notes
 
 
 # ----------------------------
