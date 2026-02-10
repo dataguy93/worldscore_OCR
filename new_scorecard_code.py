@@ -74,8 +74,6 @@ def extract_scores_from_image(
     if tesseract_cmd:
         pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
-    # Read the image supplied by the caller/CLI.
-    # A previous hard-coded local path made OCR silently run on the wrong file.
     img = cv2.imread(image_path)
     if img is None:
         raise FileNotFoundError(f"Could not read image: {image_path}")
