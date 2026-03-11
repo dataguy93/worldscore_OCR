@@ -79,7 +79,13 @@ class LandingPage extends StatelessWidget {
                         label: 'Sign In',
                         backgroundColor: const Color(0xFF1A3A5C),
                         textColor: const Color(0xFF4FC3F7),
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SignInHomePage(),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -117,6 +123,73 @@ class LandingPage extends StatelessWidget {
   }
 }
 
+class SignInHomePage extends StatelessWidget {
+  const SignInHomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1B2A),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: const [
+              Text(
+                'WORLDSCORE AI',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              SizedBox(height: 32),
+              _MenuCard(label: 'Leaderboard'),
+              SizedBox(height: 14),
+              _MenuCard(label: 'Score Cards'),
+              SizedBox(height: 14),
+              _MenuCard(label: 'Upload'),
+              SizedBox(height: 14),
+              _MenuCard(label: 'Admin'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuCard extends StatelessWidget {
+  final String label;
+
+  const _MenuCard({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142234),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1F3A56)),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Color(0xFF4FC3F7),
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
 // ──────────────────────────────────────────
 // Logo Card Widget
 // ──────────────────────────────────────────
@@ -124,8 +197,7 @@ class _LogoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 160,
-      height: 160,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         color: const Color(0xFF142234),
         borderRadius: BorderRadius.circular(28),
@@ -140,15 +212,6 @@ class _LogoCard extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Globe icon with checkmark
-          SizedBox(
-            width: 72,
-            height: 72,
-            child: CustomPaint(
-              painter: _GlobeCheckPainter(),
-            ),
-          ),
-          const SizedBox(height: 12),
           const Text(
             'WorldScoreAI',
             style: TextStyle(
@@ -163,101 +226,6 @@ class _LogoCard extends StatelessWidget {
     );
   }
 }
-
-// ──────────────────────────────────────────
-// Globe + Checkmark Custom Painter
-// ──────────────────────────────────────────
-class _GlobeCheckPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double cx = size.width / 2;
-    final double cy = size.height / 2;
-    final double r = size.width * 0.44;
-
-    final linePaint = Paint()
-      ..color = Colors.white.withOpacity(0.85)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round;
-
-    // Outer circle (globe outline)
-    canvas.drawCircle(Offset(cx, cy), r, linePaint);
-
-    // Vertical center line (meridian)
-    canvas.drawLine(Offset(cx, cy - r), Offset(cx, cy + r), linePaint);
-
-    // Horizontal lines (latitude bands)
-    for (final double fraction in [-0.45, 0.0, 0.45]) {
-      final double y = cy + fraction * r * 1.3;
-      final double halfW = _chordHalfWidth(r, y - cy);
-      canvas.drawLine(
-        Offset(cx - halfW, y),
-        Offset(cx + halfW, y),
-        linePaint,
-      );
-    }
-
-    // Curved vertical lines (longitudes left & right)
-    _drawLongitudeCurve(canvas, cx, cy, r, -0.55, linePaint);
-    _drawLongitudeCurve(canvas, cx, cy, r, 0.55, linePaint);
-
-    // Green checkmark overlay (top-right area)
-    final checkBgPaint = Paint()
-      ..color = const Color(0xFF5A8A1E)
-      ..style = PaintingStyle.fill;
-
-    final double checkCx = cx + r * 0.35;
-    final double checkCy = cy - r * 0.35;
-    const double checkR = 10.0;
-
-    canvas.drawCircle(Offset(checkCx, checkCy), checkR, checkBgPaint);
-
-    final checkPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final path = Path()
-      ..moveTo(checkCx - 5, checkCy)
-      ..lineTo(checkCx - 1.5, checkCy + 4)
-      ..lineTo(checkCx + 5, checkCy - 4);
-
-    canvas.drawPath(path, checkPaint);
-  }
-
-  double _chordHalfWidth(double r, double dy) {
-    final double val = r * r - dy * dy;
-    return val <= 0 ? 0 : (val < 0 ? 0 : val == 0 ? 0 : (val).abs().clamp(0, double.infinity) > 0 ? (val < 0 ? 0 : _sqrt(val)) : 0);
-  }
-
-  double _sqrt(double val) => val <= 0 ? 0 : (val * val > 0 ? val.abs() : 0) == 0 ? 0 : _mySqrt(val);
-
-  double _mySqrt(double x) {
-    // Simple Newton's method sqrt
-    if (x <= 0) return 0;
-    double z = x / 2;
-    for (int i = 0; i < 20; i++) {
-      z = (z + x / z) / 2;
-    }
-    return z;
-  }
-
-  void _drawLongitudeCurve(
-      Canvas canvas, double cx, double cy, double r, double xOffset, Paint paint) {
-    final path = Path();
-    final double ctrlX = cx + xOffset * r * 2.0;
-    path.moveTo(cx, cy - r);
-    path.quadraticBezierTo(ctrlX, cy, cx, cy + r);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// ──────────────────────────────────────────
 // Primary Button Widget
 // ──────────────────────────────────────────
 class _PrimaryButton extends StatelessWidget {
