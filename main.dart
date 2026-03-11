@@ -79,7 +79,13 @@ class LandingPage extends StatelessWidget {
                         label: 'Sign In',
                         backgroundColor: const Color(0xFF1A3A5C),
                         textColor: const Color(0xFF4FC3F7),
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SignInHomePage(),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -117,6 +123,73 @@ class LandingPage extends StatelessWidget {
   }
 }
 
+class SignInHomePage extends StatelessWidget {
+  const SignInHomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1B2A),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: const [
+              Text(
+                'WORLDSCORE AI',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              SizedBox(height: 32),
+              _MenuCard(label: 'Leaderboard'),
+              SizedBox(height: 14),
+              _MenuCard(label: 'Score Cards'),
+              SizedBox(height: 14),
+              _MenuCard(label: 'Upload'),
+              SizedBox(height: 14),
+              _MenuCard(label: 'Admin'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuCard extends StatelessWidget {
+  final String label;
+
+  const _MenuCard({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142234),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1F3A56)),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Color(0xFF4FC3F7),
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
 // ──────────────────────────────────────────
 // Logo Card Widget
 // ──────────────────────────────────────────
@@ -130,7 +203,7 @@ class _LogoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
