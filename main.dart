@@ -233,7 +233,7 @@ class SignInHomePage extends StatelessWidget {
               const SizedBox(height: 20),
               const _MenuCard(
                 label: 'Leaderboard',
-                subtitle: 'See current rankings and latest movement.',
+                subtitle: 'See current and former tournament standings.',
               ),
               const SizedBox(height: 14),
               const _MenuCard(
@@ -244,11 +244,6 @@ class SignInHomePage extends StatelessWidget {
               const _MenuCard(
                 label: 'Upload',
                 subtitle: 'Submit a new scorecard using AI OCR.',
-              ),
-              const SizedBox(height: 14),
-              const _MenuCard(
-                label: 'Admin',
-                subtitle: 'Access management tools and controls.',
               ),
             ],
           ),
