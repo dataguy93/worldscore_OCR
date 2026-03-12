@@ -229,6 +229,8 @@ class SignInHomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+              const _PlayerOverviewCard(),
+              const SizedBox(height: 20),
               const _MenuCard(
                 label: 'Leaderboard',
                 subtitle: 'See current rankings and latest movement.',
@@ -251,6 +253,110 @@ class SignInHomePage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PlayerOverviewCard extends StatelessWidget {
+  const _PlayerOverviewCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142234),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1F3A56)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Player Snapshot',
+            style: TextStyle(
+              color: Color(0xFF4FC3F7),
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 112,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F1A2A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF2A4D70)),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_a_photo_outlined, color: Color(0xFF7FA6C9), size: 28),
+                      SizedBox(height: 8),
+                      Text(
+                        'Upload photo',
+                        style: TextStyle(
+                          color: Color(0xFF9FB3C8),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _PlayerInfoRow(label: 'Name', value: 'Alex Morgan'),
+                    SizedBox(height: 8),
+                    _PlayerInfoRow(label: 'Rounds this year', value: '24'),
+                    SizedBox(height: 8),
+                    _PlayerInfoRow(label: 'Average score', value: '83.4'),
+                    SizedBox(height: 8),
+                    _PlayerInfoRow(label: 'Handicap', value: '12.6'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlayerInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _PlayerInfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      text: TextSpan(
+        text: '$label: ',
+        style: const TextStyle(
+          color: Color(0xFF9FB3C8),
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+        children: [
+          TextSpan(
+            text: value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
