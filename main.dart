@@ -24,6 +24,112 @@ class WorldScoreAIApp extends StatelessWidget {
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
 
+  void _showSignInDialog(BuildContext context) {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    String selectedRole = 'Director';
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Sign In'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email Address',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Player'),
+                      value: 'Player',
+                      groupValue: selectedRole,
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        setState(() => selectedRole = value);
+                      },
+                    ),
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Director'),
+                      value: 'Director',
+                      groupValue: selectedRole,
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        setState(() => selectedRole = value);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final email = emailController.text.trim();
+                    final password = passwordController.text.trim();
+
+                    if (email.isEmpty || password.isEmpty) {
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter both email and password.'),
+                          ),
+                        );
+                      return;
+                    }
+
+                    Navigator.of(dialogContext).pop();
+
+                    if (selectedRole == 'Director') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SignInHomePage(),
+                        ),
+                      );
+                    } else {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PlayerSignInHomePage(),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,13 +185,7 @@ class LandingPage extends StatelessWidget {
                         label: 'Sign In',
                         backgroundColor: const Color(0xFF1A3A5C),
                         textColor: const Color(0xFF4FC3F7),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const SignInHomePage(),
-                            ),
-                          );
-                        },
+                        onPressed: () => _showSignInDialog(context),
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -121,9 +221,8 @@ class LandingPage extends StatelessWidget {
   }
 }
 
-/*
-class SignInHomePage extends StatelessWidget {
-  const SignInHomePage({super.key});
+class PlayerSignInHomePage extends StatelessWidget {
+  const PlayerSignInHomePage({super.key});
 
   static const double _headerBarHeight = 64;
 
@@ -374,7 +473,6 @@ class _PlayerInfoRow extends StatelessWidget {
     );
   }
 }
-*/
 
 class SignInHomePage extends StatelessWidget {
   const SignInHomePage({super.key});
