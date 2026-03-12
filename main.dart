@@ -125,6 +125,8 @@ class LandingPage extends StatelessWidget {
 class SignInHomePage extends StatelessWidget {
   const SignInHomePage({super.key});
 
+  static const double _headerBarHeight = 64;
+
   void _showMenuSelection(BuildContext context, String value) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -150,7 +152,9 @@ class SignInHomePage extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      height: _headerBarHeight,
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      alignment: Alignment.centerLeft,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         gradient: const LinearGradient(
@@ -197,11 +201,13 @@ class SignInHomePage extends StatelessWidget {
                       ),
                     ],
                     child: Container(
+                      height: _headerBarHeight,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: const Color(0xFF294B6D),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: const Icon(
                         Icons.menu,
                         color: Colors.white,
