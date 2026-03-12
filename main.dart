@@ -235,8 +235,8 @@ class SignInHomePage extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               const _MenuCard(
-                label: 'Score Cards',
-                subtitle: 'Review and manage your round history.',
+                label: 'Round History',
+                subtitle: 'Review your round history and submitted scorecards.',
               ),
               const SizedBox(height: 14),
               const _MenuCard(
