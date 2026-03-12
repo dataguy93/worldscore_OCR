@@ -106,7 +106,6 @@ class LandingPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _FooterLink(label: 'View Plans', onTap: () {}),
                     _FooterLink(label: 'How It Works', onTap: () {}),
                     _FooterLink(label: 'Help & Support', onTap: () {}),
                   ],
@@ -258,7 +257,6 @@ class SignInHomePage extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _FooterLink(label: 'View Plans', onTap: () {}),
                   _FooterLink(label: 'How It Works', onTap: () {}),
                   _FooterLink(label: 'Help & Support', onTap: () {}),
                 ],
