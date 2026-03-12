@@ -146,21 +146,21 @@ class SignInHomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  border: Border.all(color: const Color(0xFF355C84)),
-                ),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(color: const Color(0xFF355C84)),
+                      ),
+                      child: const Text(
                         'WORLDSCORE AI',
                         style: TextStyle(
                           color: Colors.white,
@@ -170,31 +170,44 @@ class SignInHomePage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    PopupMenuButton<String>(
-                      tooltip: 'Open menu',
-                      onSelected: (value) => _showMenuSelection(context, value),
-                      color: const Color(0xFF142234),
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(value: 'Account', child: Text('Account')),
-                        PopupMenuItem(value: 'Who We Are', child: Text('Who We Are')),
-                        PopupMenuItem(value: 'FAQ', child: Text('FAQ')),
-                        PopupMenuItem(value: 'Settings', child: Text('Settings')),
-                      ],
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF294B6D),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.all(8),
-                        child: const Icon(
-                          Icons.menu,
-                          color: Colors.white,
-                          size: 22,
-                        ),
+                  ),
+                  const SizedBox(width: 10),
+                  PopupMenuButton<String>(
+                    tooltip: 'Open menu',
+                    onSelected: (value) => _showMenuSelection(context, value),
+                    color: const Color(0xFF142234),
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'Account',
+                        child: Text('Account', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
+                        value: 'Who We Are',
+                        child: Text('Who We Are', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
+                        value: 'FAQ',
+                        child: Text('FAQ', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
+                        value: 'Settings',
+                        child: Text('Settings', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF294B6D),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(
+                        Icons.menu,
+                        color: Colors.white,
+                        size: 22,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               const SizedBox(height: 28),
               const Text(
