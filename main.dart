@@ -100,7 +100,6 @@ class LandingPage extends StatelessWidget {
                   ],
                 ),
 
-
                 const SizedBox(height: 48),
 
                 // Footer Links
@@ -126,34 +125,108 @@ class LandingPage extends StatelessWidget {
 class SignInHomePage extends StatelessWidget {
   const SignInHomePage({super.key});
 
+  void _showMenuSelection(BuildContext context, String value) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('$value selected'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 22.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: const [
-              Text(
-                'WORLDSCORE AI',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(color: const Color(0xFF355C84)),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'WORLDSCORE AI',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      tooltip: 'Open menu',
+                      onSelected: (value) => _showMenuSelection(context, value),
+                      color: const Color(0xFF142234),
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'Account', child: Text('Account')),
+                        PopupMenuItem(value: 'Who We Are', child: Text('Who We Are')),
+                        PopupMenuItem(value: 'FAQ', child: Text('FAQ')),
+                        PopupMenuItem(value: 'Settings', child: Text('Settings')),
+                      ],
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF294B6D),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(
+                          Icons.menu,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: 32),
-              _MenuCard(label: 'Leaderboard'),
-              SizedBox(height: 14),
-              _MenuCard(label: 'Score Cards'),
-              SizedBox(height: 14),
-              _MenuCard(label: 'Upload'),
-              SizedBox(height: 14),
-              _MenuCard(label: 'Admin'),
+              const SizedBox(height: 28),
+              const Text(
+                'Welcome back',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFFB8C7D6),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const _MenuCard(
+                label: 'Leaderboard',
+                subtitle: 'See current rankings and latest movement.',
+              ),
+              const SizedBox(height: 14),
+              const _MenuCard(
+                label: 'Score Cards',
+                subtitle: 'Review and manage your round history.',
+              ),
+              const SizedBox(height: 14),
+              const _MenuCard(
+                label: 'Upload',
+                subtitle: 'Submit a new scorecard using AI OCR.',
+              ),
+              const SizedBox(height: 14),
+              const _MenuCard(
+                label: 'Admin',
+                subtitle: 'Access management tools and controls.',
+              ),
             ],
           ),
         ),
@@ -164,8 +237,9 @@ class SignInHomePage extends StatelessWidget {
 
 class _MenuCard extends StatelessWidget {
   final String label;
+  final String subtitle;
 
-  const _MenuCard({required this.label});
+  const _MenuCard({required this.label, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -176,15 +250,28 @@ class _MenuCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFF1F3A56)),
       ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Color(0xFF4FC3F7),
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF4FC3F7),
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: Color(0xFF9FB3C8),
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -226,6 +313,7 @@ class _LogoCard extends StatelessWidget {
     );
   }
 }
+
 // Primary Button Widget
 // ──────────────────────────────────────────
 class _PrimaryButton extends StatelessWidget {
