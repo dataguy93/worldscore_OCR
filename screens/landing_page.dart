@@ -127,7 +127,25 @@ class LandingPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 20),
-                const LogoCard(),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF142234),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    'assets/worldscore_logo.png',
+                    height: 72,
+                    fit: BoxFit.contain,
+                  ),
+                ),
                 const SizedBox(height: 36),
                 const Text(
                   'Snap. Score. Track.',
