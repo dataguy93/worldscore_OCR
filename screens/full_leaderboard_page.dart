@@ -136,12 +136,12 @@ class _LeaderboardHeader extends StatelessWidget {
       children: [
         _Cell(text: '#', width: 36, isHeader: true),
         _Cell(text: 'Player', width: 170, isHeader: true),
+        _Cell(text: 'Net', width: 70, isHeader: true),
+        _Cell(text: 'Total', width: 70, isHeader: true),
         _Cell(text: 'HCP', width: 60, isHeader: true),
         _Cell(text: 'R1', width: 50, isHeader: true),
         _Cell(text: 'R2', width: 50, isHeader: true),
         _Cell(text: 'R3', width: 50, isHeader: true),
-        _Cell(text: 'Net', width: 70, isHeader: true),
-        _Cell(text: 'Total', width: 70, isHeader: true),
       ],
     );
   }
@@ -166,12 +166,12 @@ class _LeaderboardEntryRow extends StatelessWidget {
       children: [
         _Cell(text: '$rank', width: 36),
         _Cell(text: entry.playerName, width: 170),
+        _Cell(text: _formatNetToPar(netTotalToPar), width: 70),
+        _Cell(text: _formatToPar(totalToPar), width: 70),
         _Cell(text: entry.handicap.toStringAsFixed(1), width: 60),
         _Cell(text: '${entry.roundScores[0]}', width: 50),
         _Cell(text: '${entry.roundScores[1]}', width: 50),
         _Cell(text: '${entry.roundScores[2]}', width: 50),
-        _Cell(text: _formatNetToPar(netTotalToPar), width: 70),
-        _Cell(text: _formatToPar(totalToPar), width: 70),
       ],
     );
   }
