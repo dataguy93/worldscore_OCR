@@ -1,20 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'full_leaderboard_page.dart';
+import 'leaderboard_dummy_data.dart';
+
 class TournamentResultsPage extends StatelessWidget {
   const TournamentResultsPage({super.key});
 
-  static const List<_LeaderboardRow> _activeTournamentLeaderboard = [
-    _LeaderboardRow(name: 'Ava Mitchell', totalToPar: '-9', r1: '68', r2: '70', r3: '69', r4: '--'),
-    _LeaderboardRow(name: 'Liam Carter', totalToPar: '-7', r1: '69', r2: '71', r3: '69', r4: '--'),
-    _LeaderboardRow(name: 'Noah Bennett', totalToPar: '-6', r1: '70', r2: '69', r3: '71', r4: '--'),
-    _LeaderboardRow(name: 'Sophia Reed', totalToPar: '-5', r1: '71', r2: '70', r3: '70', r4: '--'),
-    _LeaderboardRow(name: 'Mason Turner', totalToPar: '-4', r1: '72', r2: '69', r3: '71', r4: '--'),
-    _LeaderboardRow(name: 'Isabella Ward', totalToPar: '-3', r1: '71', r2: '72', r3: '70', r4: '--'),
-    _LeaderboardRow(name: 'Ethan Brooks', totalToPar: '-2', r1: '72', r2: '71', r3: '71', r4: '--'),
-    _LeaderboardRow(name: 'Olivia Hayes', totalToPar: '-1', r1: '73', r2: '70', r3: '72', r4: '--'),
-    _LeaderboardRow(name: 'Lucas Perry', totalToPar: 'E', r1: '72', r2: '72', r3: '72', r4: '--'),
-    _LeaderboardRow(name: 'Charlotte Price', totalToPar: '+1', r1: '73', r2: '72', r3: '72', r4: '--'),
-  ];
+  List<_LeaderboardRow> get _activeTournamentLeaderboard =>
+      _buildLeaderboardRows(activeTournamentDummyData);
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +68,7 @@ class _ActiveTournamentSection extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Spring Invitational - Pebble Ridge GC',
+            activeTournamentName,
             style: TextStyle(
               color: Colors.white,
               fontSize: 15,
@@ -99,11 +92,11 @@ class _ActiveTournamentSection extends StatelessWidget {
             alignment: Alignment.center,
             child: TextButton(
               onPressed: () {
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    const SnackBar(content: Text('Full leaderboard coming soon.')),
-                  );
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const FullLeaderboardPage(),
+                  ),
+                );
               },
               child: const Text(
                 'See Full Leaderboard',
@@ -205,6 +198,45 @@ class _LeaderboardRow {
     required this.r3,
     required this.r4,
   });
+}
+
+
+List<_LeaderboardRow> _buildLeaderboardRows(List<TournamentRoundEntry> entries) {
+  final rows = entries
+      .where((entry) =>
+          entry.tournamentName == activeTournamentName &&
+          entry.roundScores.length >= 3)
+      .map((entry) {
+    final totalStrokes = entry.roundScores.take(3).reduce((a, b) => a + b);
+    final toPar = totalStrokes - (72 * 3);
+
+    String formatToPar(int value) {
+      if (value == 0) return 'E';
+      if (value > 0) return '+$value';
+      return '$value';
+    }
+
+    return _LeaderboardRow(
+      name: entry.playerName,
+      totalToPar: formatToPar(toPar),
+      r1: entry.roundScores[0].toString(),
+      r2: entry.roundScores[1].toString(),
+      r3: entry.roundScores[2].toString(),
+      r4: '--',
+    );
+  }).toList()
+    ..sort((a, b) {
+      int scoreValue(String value) {
+        if (value == 'E') return 0;
+        return int.parse(value);
+      }
+
+      final byTotal = scoreValue(a.totalToPar).compareTo(scoreValue(b.totalToPar));
+      if (byTotal != 0) return byTotal;
+      return a.name.compareTo(b.name);
+    });
+
+  return rows;
 }
 
 class _PreviousTournamentsSection extends StatelessWidget {
