@@ -99,7 +99,7 @@ class _FullLeaderboardPageState extends State<FullLeaderboardPage> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: SizedBox(
-                    width: 760,
+                    width: 560,
                     child: Column(
                       children: [
                         const _LeaderboardHeader(),
@@ -136,13 +136,12 @@ class _LeaderboardHeader extends StatelessWidget {
       children: [
         _Cell(text: '#', width: 36, isHeader: true),
         _Cell(text: 'Player', width: 170, isHeader: true),
-        _Cell(text: 'User ID', width: 110, isHeader: true),
-        _Cell(text: 'Date', width: 100, isHeader: true),
         _Cell(text: 'HCP', width: 60, isHeader: true),
-        _Cell(text: 'Total', width: 60, isHeader: true),
         _Cell(text: 'R1', width: 50, isHeader: true),
         _Cell(text: 'R2', width: 50, isHeader: true),
         _Cell(text: 'R3', width: 50, isHeader: true),
+        _Cell(text: 'Net', width: 70, isHeader: true),
+        _Cell(text: 'Total', width: 70, isHeader: true),
       ],
     );
   }
@@ -156,24 +155,38 @@ class _LeaderboardEntryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = entry.roundScores.take(3).reduce((a, b) => a + b);
-    final date =
-        '${entry.roundDate.year}-${entry.roundDate.month.toString().padLeft(2, '0')}-${entry.roundDate.day.toString().padLeft(2, '0')}';
+    final totalStrokes = entry.roundScores.take(3).reduce((a, b) => a + b);
+    final totalToPar = totalStrokes - (72 * 3);
+    final netTotalToPar = entry.roundScores
+        .take(3)
+        .map((roundScore) => (roundScore - 72) - entry.handicap)
+        .reduce((a, b) => a + b);
 
     return Row(
       children: [
         _Cell(text: '$rank', width: 36),
         _Cell(text: entry.playerName, width: 170),
-        _Cell(text: entry.playerId, width: 110),
-        _Cell(text: date, width: 100),
         _Cell(text: entry.handicap.toStringAsFixed(1), width: 60),
-        _Cell(text: '$total', width: 60),
         _Cell(text: '${entry.roundScores[0]}', width: 50),
         _Cell(text: '${entry.roundScores[1]}', width: 50),
         _Cell(text: '${entry.roundScores[2]}', width: 50),
+        _Cell(text: _formatNetToPar(netTotalToPar), width: 70),
+        _Cell(text: _formatToPar(totalToPar), width: 70),
       ],
     );
   }
+}
+
+String _formatToPar(int value) {
+  if (value == 0) return 'E';
+  if (value > 0) return '+$value';
+  return '$value';
+}
+
+String _formatNetToPar(double value) {
+  if (value.abs() < 0.05) return 'E';
+  final rounded = value.toStringAsFixed(1);
+  return value > 0 ? '+$rounded' : rounded;
 }
 
 class _Cell extends StatelessWidget {
