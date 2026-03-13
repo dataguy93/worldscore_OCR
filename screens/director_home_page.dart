@@ -21,6 +21,26 @@ class SignInHomePage extends StatelessWidget {
       );
   }
 
+  Route<void> _buildSlideFromLeftRoute(Widget page) {
+    return PageRouteBuilder<void>(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(-1, 0);
+        const end = Offset.zero;
+        const curve = Curves.easeOutCubic;
+
+        final tween = Tween(begin: begin, end: end).chain(
+          CurveTween(curve: curve),
+        );
+
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: child,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -145,7 +165,7 @@ class SignInHomePage extends StatelessWidget {
                         onRoleChanged: (role) {
                           if (role == 'Player') {
                             Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (_) => const PlayerSignInHomePage()),
+                              _buildSlideFromLeftRoute(const PlayerSignInHomePage()),
                             );
                           }
                         },
