@@ -40,29 +40,25 @@ class LandingPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    RadioListTile<String>(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Player'),
-                      value: 'Player',
-                      groupValue: selectedRole,
-                      onChanged: (value) {
-                        if (value == null) {
-                          return;
-                        }
-                        setState(() => selectedRole = value);
-                      },
-                    ),
-                    RadioListTile<String>(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Director'),
-                      value: 'Director',
-                      groupValue: selectedRole,
-                      onChanged: (value) {
-                        if (value == null) {
-                          return;
-                        }
-                        setState(() => selectedRole = value);
-                      },
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment<String>(
+                            value: 'Player',
+                            label: Text('Player'),
+                          ),
+                          ButtonSegment<String>(
+                            value: 'Director',
+                            label: Text('Director'),
+                          ),
+                        ],
+                        selected: {selectedRole},
+                        showSelectedIcon: false,
+                        onSelectionChanged: (selection) {
+                          setState(() => selectedRole = selection.first);
+                        },
+                      ),
                     ),
                   ],
                 ),
