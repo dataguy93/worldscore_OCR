@@ -267,11 +267,11 @@ class _PlayerOverviewCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _PlayerInfoRow(label: 'Name', value: 'Alex Morgan'),
+                    _PlayerInfoRow(label: 'Name', value: 'Dalton Stout'),
                     SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Rounds this year', value: '24'),
+                    _PlayerInfoRow(label: 'Rounds this year', value: '15'),
                     SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Average score', value: '83.4'),
+                    _PlayerInfoRow(label: 'Average score', value: '86.1'),
                     SizedBox(height: 8),
                     _PlayerInfoRow(label: 'Handicap', value: '12.6'),
                   ],

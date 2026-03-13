@@ -250,7 +250,7 @@ class _DirectorOverviewCard extends StatelessWidget {
           SizedBox(height: 8),
           _DirectorInfoRow(label: 'Club', value: 'Club Campestre el Rodeo'),
           SizedBox(height: 8),
-          _DirectorInfoRow(label: 'Association', value: 'USGA'),
+          _DirectorInfoRow(label: 'Association', value: 'Federación Colombiana de Golf'),
         ],
       ),
     );
