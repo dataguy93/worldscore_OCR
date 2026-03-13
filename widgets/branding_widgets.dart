@@ -63,9 +63,13 @@ class PrimaryButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
         child: Text(
           label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
           style: TextStyle(
             color: textColor,
             fontSize: 15,
