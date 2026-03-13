@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
+import 'player_home_page.dart';
 import 'tournament_results_page.dart';
 
 class SignInHomePage extends StatelessWidget {
@@ -28,7 +29,7 @@ class SignInHomePage extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 22.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight - 44),
                 child: Column(
@@ -56,7 +57,7 @@ class SignInHomePage extends StatelessWidget {
                                 color: Colors.white,
                                 fontSize: 24,
                                 fontWeight: FontWeight.w700,
-                                letterSpacing: 1.0,
+                                letterSpacing: 1,
                               ),
                             ),
                           ),
@@ -94,11 +95,7 @@ class SignInHomePage extends StatelessWidget {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: const Icon(
-                              Icons.menu,
-                              color: Colors.white,
-                              size: 22,
-                            ),
+                            child: const Icon(Icons.menu, color: Colors.white, size: 22),
                           ),
                         ),
                       ],
@@ -122,9 +119,7 @@ class SignInHomePage extends StatelessWidget {
                       subtitle: 'View current and former tournament leaderboards.',
                       onTap: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const TournamentResultsPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const TournamentResultsPage()),
                         );
                       },
                     ),
@@ -143,6 +138,17 @@ class SignInHomePage extends StatelessWidget {
                       label: 'Admin',
                       subtitle: 'Create, adjust and manage tournament paramaters.',
                     ),
+                    const SizedBox(height: 16),
+                    _ProfileSwitchCard(
+                      selectedRole: 'Director',
+                      onRoleChanged: (role) {
+                        if (role == 'Player') {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(builder: (_) => const PlayerSignInHomePage()),
+                          );
+                        }
+                      },
+                    ),
                     const SizedBox(height: 28),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -158,6 +164,59 @@ class SignInHomePage extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileSwitchCard extends StatelessWidget {
+  final String selectedRole;
+  final ValueChanged<String> onRoleChanged;
+
+  const _ProfileSwitchCard({
+    required this.selectedRole,
+    required this.onRoleChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142234),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1F3A56)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Switch Profile View',
+            style: TextStyle(
+              color: Color(0xFF4FC3F7),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Use this toggle if you have both player and director profiles.',
+            style: TextStyle(
+              color: Color(0xFF9FB3C8),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment<String>(value: 'Player', label: Text('Player')),
+              ButtonSegment<String>(value: 'Director', label: Text('Director')),
+            ],
+            selected: {selectedRole},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) => onRoleChanged(selection.first),
+          ),
+        ],
       ),
     );
   }
