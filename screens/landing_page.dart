@@ -142,7 +142,7 @@ class LandingPage extends StatelessWidget {
                   ),
                   child: Image.asset(
                     'assets/worldscore_logo.png',
-                    height: 72,
+                    height: 96,
                     fit: BoxFit.contain,
                   ),
                 ),
