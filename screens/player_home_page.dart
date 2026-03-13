@@ -25,133 +25,135 @@ class PlayerSignInHomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 44),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: _headerBarHeight,
-                            padding: const EdgeInsets.symmetric(horizontal: 18),
-                            alignment: Alignment.centerLeft,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              border: Border.all(color: const Color(0xFF355C84)),
-                            ),
-                            child: const Text(
-                              'WORLDSCORE AI',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: _headerBarHeight,
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      alignment: Alignment.centerLeft,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        const SizedBox(width: 10),
-                        PopupMenuButton<String>(
-                          tooltip: 'Open menu',
-                          onSelected: (value) => _showMenuSelection(context, value),
-                          color: const Color(0xFF142234),
-                          position: PopupMenuPosition.under,
-                          offset: const Offset(0, 8),
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(
-                              value: 'Account',
-                              child: Text('Account', style: TextStyle(color: Colors.white)),
-                            ),
-                            PopupMenuItem(
-                              value: 'Who We Are',
-                              child: Text('Who We Are', style: TextStyle(color: Colors.white)),
-                            ),
-                            PopupMenuItem(
-                              value: 'FAQ',
-                              child: Text('FAQ', style: TextStyle(color: Colors.white)),
-                            ),
-                            PopupMenuItem(
-                              value: 'Settings',
-                              child: Text('Settings', style: TextStyle(color: Colors.white)),
-                            ),
-                          ],
-                          child: Container(
-                            height: _headerBarHeight,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF294B6D),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: const Icon(Icons.menu, color: Colors.white, size: 22),
-                          ),
+                        border: Border.all(color: const Color(0xFF355C84)),
+                      ),
+                      child: const Text(
+                        'WORLDSCORE AI',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 28),
-                    const Text(
-                      'Welcome back',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFFB8C7D6),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.2,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    const _PlayerOverviewCard(),
-                    const SizedBox(height: 20),
-                    const MenuCard(
-                      label: 'Leaderboard',
-                      subtitle: 'See current and former tournament standings.',
+                  ),
+                  const SizedBox(width: 10),
+                  PopupMenuButton<String>(
+                    tooltip: 'Open menu',
+                    onSelected: (value) => _showMenuSelection(context, value),
+                    color: const Color(0xFF142234),
+                    position: PopupMenuPosition.under,
+                    offset: const Offset(0, 8),
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'Account',
+                        child: Text('Account', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
+                        value: 'Who We Are',
+                        child: Text('Who We Are', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
+                        value: 'FAQ',
+                        child: Text('FAQ', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
+                        value: 'Settings',
+                        child: Text('Settings', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                    child: Container(
+                      height: _headerBarHeight,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF294B6D),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: const Icon(Icons.menu, color: Colors.white, size: 22),
                     ),
-                    const SizedBox(height: 14),
-                    const MenuCard(
-                      label: 'Round History',
-                      subtitle: 'Review your round history and submitted scorecards.',
-                    ),
-                    const SizedBox(height: 14),
-                    const MenuCard(
-                      label: 'Upload',
-                      subtitle: 'Submit a new scorecard using AI OCR.',
-                    ),
-                    const SizedBox(height: 16),
-                    _ProfileSwitchCard(
-                      selectedRole: 'Player',
-                      onRoleChanged: (role) {
-                        if (role == 'Director') {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(builder: (_) => const SignInHomePage()),
-                          );
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 28),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        FooterLink(label: 'How It Works', onTap: () {}),
-                        FooterLink(label: 'Help & Support', onTap: () {}),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Welcome back',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFFB8C7D6),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const _PlayerOverviewCard(),
+                      const SizedBox(height: 20),
+                      const MenuCard(
+                        label: 'Leaderboard',
+                        subtitle: 'See current and former tournament standings.',
+                      ),
+                      const SizedBox(height: 14),
+                      const MenuCard(
+                        label: 'Round History',
+                        subtitle: 'Review your round history and submitted scorecards.',
+                      ),
+                      const SizedBox(height: 14),
+                      const MenuCard(
+                        label: 'Upload',
+                        subtitle: 'Submit a new scorecard using AI OCR.',
+                      ),
+                      const SizedBox(height: 16),
+                      _ProfileSwitchCard(
+                        selectedRole: 'Player',
+                        onRoleChanged: (role) {
+                          if (role == 'Director') {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (_) => const SignInHomePage()),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 28),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          FooterLink(label: 'How It Works', onTap: () {}),
+                          FooterLink(label: 'Help & Support', onTap: () {}),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
