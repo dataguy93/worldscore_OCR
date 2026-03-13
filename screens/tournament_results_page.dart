@@ -83,9 +83,17 @@ class _ActiveTournamentSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const _LeaderboardHeaderRow(),
-          const SizedBox(height: 8),
-          ...leaderboardRows.take(10).map(_LeaderboardDataRow.new),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _LeaderboardHeaderRow(),
+                const SizedBox(height: 8),
+                ...leaderboardRows.take(10).map(_LeaderboardDataRow.new),
+              ],
+            ),
+          ),
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.center,
@@ -119,12 +127,12 @@ class _LeaderboardHeaderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Row(
       children: [
-        Expanded(flex: 4, child: _LeaderboardCell(text: 'Name', isHeader: true)),
-        Expanded(flex: 2, child: _LeaderboardCell(text: 'Total', isHeader: true)),
-        Expanded(child: _LeaderboardCell(text: 'R1', isHeader: true)),
-        Expanded(child: _LeaderboardCell(text: 'R2', isHeader: true)),
-        Expanded(child: _LeaderboardCell(text: 'R3', isHeader: true)),
-        Expanded(child: _LeaderboardCell(text: 'R4', isHeader: true)),
+        _LeaderboardCell(text: 'Name', isHeader: true, width: 170),
+        _LeaderboardCell(text: 'Total', isHeader: true, width: 70),
+        _LeaderboardCell(text: 'R1', isHeader: true, width: 50),
+        _LeaderboardCell(text: 'R2', isHeader: true, width: 50),
+        _LeaderboardCell(text: 'R3', isHeader: true, width: 50),
+        _LeaderboardCell(text: 'R4', isHeader: true, width: 50),
       ],
     );
   }
@@ -141,12 +149,12 @@ class _LeaderboardDataRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Expanded(flex: 4, child: _LeaderboardCell(text: row.name)),
-          Expanded(flex: 2, child: _LeaderboardCell(text: row.totalToPar)),
-          Expanded(child: _LeaderboardCell(text: row.r1)),
-          Expanded(child: _LeaderboardCell(text: row.r2)),
-          Expanded(child: _LeaderboardCell(text: row.r3)),
-          Expanded(child: _LeaderboardCell(text: row.r4)),
+          _LeaderboardCell(text: row.name, width: 170),
+          _LeaderboardCell(text: row.totalToPar, width: 70),
+          _LeaderboardCell(text: row.r1, width: 50),
+          _LeaderboardCell(text: row.r2, width: 50),
+          _LeaderboardCell(text: row.r3, width: 50),
+          _LeaderboardCell(text: row.r4, width: 50),
         ],
       ),
     );
@@ -156,18 +164,26 @@ class _LeaderboardDataRow extends StatelessWidget {
 class _LeaderboardCell extends StatelessWidget {
   final String text;
   final bool isHeader;
+  final double width;
 
-  const _LeaderboardCell({required this.text, this.isHeader = false});
+  const _LeaderboardCell({
+    required this.text,
+    required this.width,
+    this.isHeader = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        color: isHeader ? const Color(0xFF9FB3C8) : const Color(0xFFD6E3F0),
-        fontSize: isHeader ? 12 : 13,
-        fontWeight: isHeader ? FontWeight.w600 : FontWeight.w500,
+    return SizedBox(
+      width: width,
+      child: Text(
+        text,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: isHeader ? const Color(0xFF9FB3C8) : const Color(0xFFD6E3F0),
+          fontSize: isHeader ? 12 : 13,
+          fontWeight: isHeader ? FontWeight.w600 : FontWeight.w500,
+        ),
       ),
     );
   }
