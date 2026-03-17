@@ -6,13 +6,26 @@ from google import genai
 from google.genai import types
 from PIL import Image, ImageOps
 
-client = genai.Client(
-    api_key=os.environ.get("AI_INTEGRATIONS_GEMINI_API_KEY"),
-    http_options={
-        'api_version': '',
-        'base_url': os.environ.get("AI_INTEGRATIONS_GEMINI_BASE_URL")
-    }
-)
+client = None
+
+
+def _get_client():
+    global client
+    if client is not None:
+        return client
+
+    api_key = os.environ.get("AI_INTEGRATIONS_GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("AI_INTEGRATIONS_GEMINI_API_KEY is required")
+
+    client = genai.Client(
+        api_key=api_key,
+        http_options={
+            'api_version': '',
+            'base_url': os.environ.get("AI_INTEGRATIONS_GEMINI_BASE_URL")
+        }
+    )
+    return client
 
 MODEL_PRIMARY = "gemini-2.5-flash"
 MODEL_FAST = "gemini-2.5-flash"
@@ -207,7 +220,7 @@ def _call_gemini(prompt_text, image_bytes, media_type, model=None, max_tokens=40
         try:
             if attempt > 0:
                 _time.sleep(3 + attempt * 2)
-            response = client.models.generate_content(
+            response = _get_client().models.generate_content(
                 model=model,
                 contents=[
                     types.Content(

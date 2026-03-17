@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import tempfile
 
@@ -7,6 +8,48 @@ from flask import Flask, jsonify, request
 from ocr_engine import ocr_scorecard, process_ocr_for_round
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_UPLOAD_MB", "20")) * 1024 * 1024
+
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
+
+@app.route("/ocr", methods=["OPTIONS"])
+@app.route("/ocr/round", methods=["OPTIONS"])
+def ocr_options():
+    return ("", 204)
+
+
+def _decode_base64_image(image_base64):
+    if not image_base64:
+        return None
+    if "," in image_base64 and image_base64.strip().startswith("data:"):
+        image_base64 = image_base64.split(",", 1)[1]
+    return base64.b64decode(image_base64)
+
+
+def _create_temp_image_file(image_file=None, image_base64=None):
+    if image_file is None and not image_base64:
+        raise ValueError("No image content was provided")
+
+    suffix = ".jpg"
+    if image_file is not None:
+        _, ext = os.path.splitext(image_file.filename or "")
+        if ext:
+            suffix = ext
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            image_file.save(tmp)
+            return tmp.name
+
+    image_bytes = _decode_base64_image(image_base64)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(image_bytes)
+        return tmp.name
 
 
 @app.get("/")
@@ -14,30 +57,24 @@ def health_check():
     return jsonify({"status": "ok"})
 
 
+@app.get("/ready")
+def ready_check():
+    return jsonify({"ready": True, "service": "worldscore-ocr"})
+
+
 @app.post("/ocr")
 def ocr_endpoint():
     image_file = request.files.get("image")
-    image_base64 = request.json.get("image_base64") if request.is_json else None
+    body = request.get_json(silent=True) or {}
+    image_base64 = body.get("image_base64")
 
     if image_file is None and not image_base64:
         return jsonify({"error": "Provide an image file via multipart/form-data field 'image' or JSON field 'image_base64'."}), 400
 
-    suffix = ".jpg"
     tmp_path = None
 
     try:
-        if image_file is not None:
-            _, ext = os.path.splitext(image_file.filename or "")
-            if ext:
-                suffix = ext
-            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                image_file.save(tmp)
-                tmp_path = tmp.name
-        else:
-            image_bytes = base64.b64decode(image_base64)
-            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                tmp.write(image_bytes)
-                tmp_path = tmp.name
+        tmp_path = _create_temp_image_file(image_file=image_file, image_base64=image_base64)
 
         result = ocr_scorecard(tmp_path)
         return jsonify(result)
@@ -51,23 +88,20 @@ def ocr_endpoint():
 @app.post("/ocr/round")
 def ocr_round_endpoint():
     image_file = request.files.get("image")
-    round_data = request.form.get("round_data")
+    body = request.get_json(silent=True) or {}
+    image_base64 = body.get("image_base64")
+    round_data = request.form.get("round_data") or body.get("round_data")
 
-    if image_file is None:
-        return jsonify({"error": "Provide an image file via multipart/form-data field 'image'."}), 400
+    if image_file is None and not image_base64:
+        return jsonify({"error": "Provide image data via multipart/form-data field 'image' or JSON field 'image_base64'."}), 400
 
+    tmp_path = None
     try:
         parsed_round_data = {}
         if round_data:
-            import json
             parsed_round_data = json.loads(round_data)
 
-        _, ext = os.path.splitext(image_file.filename or "")
-        suffix = ext or ".jpg"
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            image_file.save(tmp)
-            tmp_path = tmp.name
+        tmp_path = _create_temp_image_file(image_file=image_file, image_base64=image_base64)
 
         result = process_ocr_for_round(tmp_path, parsed_round_data)
         return jsonify(result)
