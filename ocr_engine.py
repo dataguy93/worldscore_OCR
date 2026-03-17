@@ -226,6 +226,20 @@ def _repair_truncated_json(text):
     return result
 
 
+
+
+def _build_generate_content_config(max_tokens=4096):
+    config_kwargs = {
+        "max_output_tokens": max_tokens,
+        "temperature": 0.0,
+    }
+
+    thinking_config_cls = getattr(types, "ThinkingConfig", None)
+    if thinking_config_cls is not None:
+        config_kwargs["thinking_config"] = thinking_config_cls(thinking_budget=0)
+
+    return types.GenerateContentConfig(**config_kwargs)
+
 def _call_gemini(prompt_text, image_bytes, media_type, model=None, max_tokens=4096):
     import time as _time
     if model is None:
@@ -246,13 +260,7 @@ def _call_gemini(prompt_text, image_bytes, media_type, model=None, max_tokens=40
                         ]
                     )
                 ],
-                config=types.GenerateContentConfig(
-                    max_output_tokens=max_tokens,
-                    temperature=0.0,
-                    thinking_config=types.ThinkingConfig(
-                        thinking_budget=0,
-                    ),
-                )
+                config=_build_generate_content_config(max_tokens=max_tokens)
             )
             text = ""
             if hasattr(response, 'text') and response.text:
