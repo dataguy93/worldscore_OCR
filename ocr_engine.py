@@ -9,21 +9,32 @@ from PIL import Image, ImageOps
 client = None
 
 
+def _load_gemini_api_key():
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        return api_key
+
+    key_file_path = os.path.join(os.path.dirname(__file__), "gemini_api_key.txt")
+    try:
+        with open(key_file_path, "r", encoding="utf-8") as key_file:
+            api_key = key_file.read().strip()
+            if api_key:
+                return api_key
+    except FileNotFoundError:
+        pass
+
+    raise ValueError("GEMINI_API_KEY is required (env var or gemini_api_key.txt)")
+
+
 def _get_client():
     global client
     if client is not None:
         return client
 
-    api_key = os.environ.get("AI_INTEGRATIONS_GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("AI_INTEGRATIONS_GEMINI_API_KEY is required")
+    api_key = _load_gemini_api_key()
 
     client = genai.Client(
         api_key=api_key,
-        http_options={
-            'api_version': '',
-            'base_url': os.environ.get("AI_INTEGRATIONS_GEMINI_BASE_URL")
-        }
     )
     return client
 
