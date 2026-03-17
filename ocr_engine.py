@@ -2,6 +2,7 @@ import os
 import base64
 import json
 from io import BytesIO
+from pathlib import Path
 from google import genai
 from google.genai import types
 from PIL import Image, ImageOps
@@ -9,14 +10,28 @@ from PIL import Image, ImageOps
 client = None
 
 
+def _load_gemini_api_key():
+    key_file_path = Path(__file__).with_name("gemini_api_key.txt")
+    if key_file_path.exists():
+        api_key = key_file_path.read_text(encoding="utf-8").strip()
+        if api_key:
+            return api_key
+
+    api_key = os.environ.get("AI_INTEGRATIONS_GEMINI_API_KEY")
+    if api_key:
+        return api_key
+
+    raise ValueError(
+        "Gemini API key not found. Add it to gemini_api_key.txt or set AI_INTEGRATIONS_GEMINI_API_KEY."
+    )
+
+
 def _get_client():
     global client
     if client is not None:
         return client
 
-    api_key = os.environ.get("AI_INTEGRATIONS_GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("AI_INTEGRATIONS_GEMINI_API_KEY is required")
+    api_key = _load_gemini_api_key()
 
     client = genai.Client(
         api_key=api_key,
