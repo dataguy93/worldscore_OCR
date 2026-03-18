@@ -15,6 +15,12 @@ MODEL_FAST = "gemini-2.5-flash"
 
 SCORECARD_PROMPT = """You are an expert golf scorecard OCR system. Extract every number and name from this golf scorecard photo with extreme precision.
 
+OUTPUT CONTRACT (MUST FOLLOW EXACTLY):
+- Return ONLY valid JSON.
+- Do not wrap JSON in markdown.
+- Do not use ```json fences.
+- Do not include explanation before or after JSON.
+
 SCORECARD LAYOUT (columns left to right):
 NAME | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | OUT | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | IN | TOT | HCP | NET
 
@@ -217,6 +223,7 @@ def _call_gemini(prompt_text, image_bytes, media_type, model=None, max_tokens=40
                 config=types.GenerateContentConfig(
                     max_output_tokens=max_tokens,
                     temperature=0.0,
+                    response_mime_type="application/json",
                 ),
             )
             text = ""
@@ -280,7 +287,7 @@ def ocr_scorecard(image_path):
             import time as _t0
             _t0.sleep(3)
             raw_text = _call_gemini(
-                SCORECARD_PROMPT + "\n\nIMPORTANT: Return ONLY valid JSON. No markdown, no extra text.",
+                SCORECARD_PROMPT + "\n\nIMPORTANT: STRICT JSON ONLY. No markdown, no code fences, no prose.",
                 image_bytes, media_type, model=MODEL_PRIMARY
             )
             result = _parse_json_response(raw_text)
