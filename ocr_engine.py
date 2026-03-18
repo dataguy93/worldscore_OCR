@@ -21,6 +21,8 @@ OUTPUT CONTRACT (MUST FOLLOW EXACTLY):
 - Do not wrap JSON in markdown.
 - Do not use ```json fences.
 - Do not include explanation before or after JSON.
+- Do not truncate output.
+- Ensure all JSON arrays/objects/strings are fully closed.
 
 SCORECARD LAYOUT (columns left to right):
 NAME | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | OUT | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | IN | TOT | HCP | NET
@@ -139,53 +141,98 @@ def get_image_media_type(image_path):
     return media_types.get(ext, "image/jpeg")
 
 
-def _parse_json_response(raw_text):
-    def _truncate_for_log(text, limit=500):
-        if text is None:
-            return ""
-        if len(text) <= limit:
-            return text
-        return text[:limit] + "... [truncated]"
+class OCRParseError(Exception):
+    def __init__(self, message, stage, cleaned_response=None):
+        super().__init__(message)
+        self.stage = stage
+        self.cleaned_response = cleaned_response
 
-    print(f"OCR raw AI response: {_truncate_for_log(raw_text)}")
-    raw_text = _strip_markdown_code_fences(raw_text)
-    print(f"OCR cleaned AI response: {_truncate_for_log(raw_text)}")
+
+def _parse_json_response(raw_text):
+    raw_preview = (raw_text or "")[:200]
+    print(f"OCR raw response length={len(raw_text or '')}, preview={raw_preview}")
+    cleaned_text, had_markdown_wrapper = _strip_markdown_code_fences(raw_text)
+    if had_markdown_wrapper:
+        print("OCR parse notice: markdown wrapper detected and stripped")
 
     try:
-        parsed = json.loads(raw_text)
+        parsed = json.loads(cleaned_text)
         print("OCR JSON parse success")
         return parsed
-    except json.JSONDecodeError:
-        print("OCR JSON parse failed; trying JSON repair")
-        try:
-            repaired = _repair_truncated_json(raw_text)
-            parsed = json.loads(repaired)
-            print("OCR JSON repair parse success")
-            return parsed
-        except (json.JSONDecodeError, Exception):
-            print("OCR JSON parse failed after repair")
-            raise ValueError("AI response is not valid JSON after cleaning markdown/code fences and repair attempts")
+    except json.JSONDecodeError as e:
+        tail = cleaned_text[-200:] if cleaned_text else ""
+        print(f"OCR JSON decode failed: cleaned_length={len(cleaned_text)}, tail={tail}")
+        if _looks_truncated_json(cleaned_text):
+            print("OCR parse failure stage: truncated_json")
+            raise OCRParseError(
+                "Likely truncated/incomplete JSON from model output",
+                stage="truncated_json",
+                cleaned_response=cleaned_text,
+            ) from e
+        print("OCR parse failure stage: json_decode")
+        raise OCRParseError(
+            "Failed to decode cleaned JSON response",
+            stage="json_decode",
+            cleaned_response=cleaned_text,
+        ) from e
 
 
 def _strip_markdown_code_fences(raw_text):
     if raw_text is None:
-        return ""
+        return "", False
 
-    cleaned = raw_text.strip()
+    original = raw_text
+    cleaned = original.strip()
     fenced_block = re.match(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", cleaned, flags=re.DOTALL | re.IGNORECASE)
+    had_markdown_wrapper = False
     if fenced_block:
         cleaned = fenced_block.group(1).strip()
+        had_markdown_wrapper = True
     else:
-        cleaned = re.sub(r"^\s*```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r"\s*```\s*$", "", cleaned)
-        cleaned = cleaned.strip()
+        updated = re.sub(r"^\s*```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        updated = re.sub(r"\s*```\s*$", "", updated)
+        cleaned = updated.strip()
+        had_markdown_wrapper = cleaned != original.strip()
 
     json_start = cleaned.find("{")
     json_end = cleaned.rfind("}")
     if json_start >= 0 and json_end > json_start:
         cleaned = cleaned[json_start:json_end + 1]
 
-    return cleaned
+    return cleaned, had_markdown_wrapper
+
+
+def _looks_truncated_json(text):
+    if not text:
+        return True
+
+    open_braces = 0
+    open_brackets = 0
+    in_string = False
+    escape = False
+
+    for c in text:
+        if escape:
+            escape = False
+            continue
+        if c == "\\":
+            escape = True
+            continue
+        if c == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if c == "{":
+            open_braces += 1
+        elif c == "}":
+            open_braces -= 1
+        elif c == "[":
+            open_brackets += 1
+        elif c == "]":
+            open_brackets -= 1
+
+    return in_string or open_braces > 0 or open_brackets > 0
 
 
 def _repair_truncated_json(text):
@@ -309,16 +356,7 @@ def ocr_scorecard(image_path):
         media_type = normalized_media_type or get_image_media_type(image_path)
 
         raw_text = _call_gemini(SCORECARD_PROMPT, image_bytes, media_type, model=MODEL_PRIMARY)
-        try:
-            result = _parse_json_response(raw_text)
-        except json.JSONDecodeError:
-            import time as _t0
-            _t0.sleep(3)
-            raw_text = _call_gemini(
-                SCORECARD_PROMPT + "\n\nIMPORTANT: STRICT JSON ONLY. No markdown, no code fences, no prose.",
-                image_bytes, media_type, model=MODEL_PRIMARY
-            )
-            result = _parse_json_response(raw_text)
+        result = _parse_json_response(raw_text)
 
         par = result.get("par", [])
         if len(par) != 18:
@@ -449,22 +487,50 @@ def ocr_scorecard(image_path):
                     f"(diff={computed - wt}). Hole scores are authoritative."
                 )
 
+        result["success"] = True
         return _ensure_response_shape(result)
 
+    except OCRParseError as e:
+        cleaned_raw = e.cleaned_response if e.cleaned_response is not None else ""
+        return _ensure_response_shape({
+            "success": False,
+            "confidence": "LOW",
+            "error": f"Failed to parse OCR response: {str(e)}",
+            "issues": ["JSON parse error from AI response"],
+            "players": [],
+            "raw_response": cleaned_raw,
+            "parse_stage": e.stage,
+            "course_name": None,
+            "par": [],
+            "par_front_9_total": None,
+            "par_back_9_total": None,
+        })
     except (json.JSONDecodeError, ValueError) as e:
         return _ensure_response_shape({
-            "error": f"Failed to parse OCR response: {str(e)}",
-            "raw_response": _strip_markdown_code_fences(raw_text) if 'raw_text' in dir() else "No response",
-            "players": [],
+            "success": False,
             "confidence": "LOW",
-            "issues": ["JSON parse error from AI response"]
+            "error": f"Failed to parse OCR response: {str(e)}",
+            "raw_response": _strip_markdown_code_fences(raw_text)[0] if 'raw_text' in dir() else "No response",
+            "players": [],
+            "issues": ["JSON parse error from AI response"],
+            "parse_stage": "json_decode",
+            "course_name": None,
+            "par": [],
+            "par_front_9_total": None,
+            "par_back_9_total": None,
         })
     except Exception as e:
         return _ensure_response_shape({
+            "success": False,
+            "confidence": "LOW",
             "error": f"OCR processing failed: {str(e)}",
             "players": [],
-            "confidence": "LOW",
-            "issues": [str(e)]
+            "issues": [str(e)],
+            "parse_stage": "markdown_cleanup",
+            "course_name": None,
+            "par": [],
+            "par_front_9_total": None,
+            "par_back_9_total": None,
         })
 
 
@@ -609,6 +675,15 @@ def _ensure_response_shape(result):
 
     if "course_name" not in result:
         result["course_name"] = None
+
+    if "par" not in result or not isinstance(result.get("par"), list):
+        result["par"] = []
+
+    if "par_front_9_total" not in result:
+        result["par_front_9_total"] = None
+
+    if "par_back_9_total" not in result:
+        result["par_back_9_total"] = None
 
     if "totals" not in result or not isinstance(result.get("totals"), dict):
         result["totals"] = {}
