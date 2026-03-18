@@ -1,6 +1,7 @@
 import os
 import base64
 import json
+import re
 from io import BytesIO
 from google import genai
 from google.genai import types
@@ -139,25 +140,52 @@ def get_image_media_type(image_path):
 
 
 def _parse_json_response(raw_text):
-    if raw_text.startswith("```json"):
-        raw_text = raw_text[7:]
-    if raw_text.startswith("```"):
-        raw_text = raw_text[3:]
-    if raw_text.endswith("```"):
-        raw_text = raw_text[:-3]
-    raw_text = raw_text.strip()
-    json_start = raw_text.find('{')
-    json_end = raw_text.rfind('}')
-    if json_start >= 0 and json_end > json_start:
-        raw_text = raw_text[json_start:json_end + 1]
+    def _truncate_for_log(text, limit=500):
+        if text is None:
+            return ""
+        if len(text) <= limit:
+            return text
+        return text[:limit] + "... [truncated]"
+
+    print(f"OCR raw AI response: {_truncate_for_log(raw_text)}")
+    raw_text = _strip_markdown_code_fences(raw_text)
+    print(f"OCR cleaned AI response: {_truncate_for_log(raw_text)}")
+
     try:
-        return json.loads(raw_text)
+        parsed = json.loads(raw_text)
+        print("OCR JSON parse success")
+        return parsed
     except json.JSONDecodeError:
+        print("OCR JSON parse failed; trying JSON repair")
         try:
             repaired = _repair_truncated_json(raw_text)
-            return json.loads(repaired)
+            parsed = json.loads(repaired)
+            print("OCR JSON repair parse success")
+            return parsed
         except (json.JSONDecodeError, Exception):
-            raise json.JSONDecodeError("Could not parse or repair JSON", raw_text[:200], 0)
+            print("OCR JSON parse failed after repair")
+            raise ValueError("AI response is not valid JSON after cleaning markdown/code fences and repair attempts")
+
+
+def _strip_markdown_code_fences(raw_text):
+    if raw_text is None:
+        return ""
+
+    cleaned = raw_text.strip()
+    fenced_block = re.match(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", cleaned, flags=re.DOTALL | re.IGNORECASE)
+    if fenced_block:
+        cleaned = fenced_block.group(1).strip()
+    else:
+        cleaned = re.sub(r"^\s*```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```\s*$", "", cleaned)
+        cleaned = cleaned.strip()
+
+    json_start = cleaned.find("{")
+    json_end = cleaned.rfind("}")
+    if json_start >= 0 and json_end > json_start:
+        cleaned = cleaned[json_start:json_end + 1]
+
+    return cleaned
 
 
 def _repair_truncated_json(text):
@@ -421,23 +449,23 @@ def ocr_scorecard(image_path):
                     f"(diff={computed - wt}). Hole scores are authoritative."
                 )
 
-        return result
+        return _ensure_response_shape(result)
 
-    except json.JSONDecodeError as e:
-        return {
+    except (json.JSONDecodeError, ValueError) as e:
+        return _ensure_response_shape({
             "error": f"Failed to parse OCR response: {str(e)}",
-            "raw_response": raw_text if 'raw_text' in dir() else "No response",
+            "raw_response": _strip_markdown_code_fences(raw_text) if 'raw_text' in dir() else "No response",
             "players": [],
             "confidence": "LOW",
             "issues": ["JSON parse error from AI response"]
-        }
+        })
     except Exception as e:
-        return {
+        return _ensure_response_shape({
             "error": f"OCR processing failed: {str(e)}",
             "players": [],
             "confidence": "LOW",
             "issues": [str(e)]
-        }
+        })
 
 
 def _fix_swapped_subtotals(result):
@@ -568,6 +596,34 @@ def _programmatic_crosscheck(result):
 
     if flagged_holes:
         result["flagged_holes"] = flagged_holes
+
+    return result
+
+
+def _ensure_response_shape(result):
+    if not isinstance(result, dict):
+        result = {}
+
+    if "players" not in result or not isinstance(result.get("players"), list):
+        result["players"] = []
+
+    if "course_name" not in result:
+        result["course_name"] = None
+
+    if "totals" not in result or not isinstance(result.get("totals"), dict):
+        result["totals"] = {}
+
+    players = result.get("players", [])
+    result["totals"]["players_count"] = len(players)
+    result["totals"]["holes_recorded"] = sum(
+        len([h for h in p.get("holes", []) if h is not None])
+        for p in players
+        if isinstance(p, dict)
+    )
+    result["totals"]["gross_sum"] = sum(
+        p.get("gross_total", 0) for p in players
+        if isinstance(p, dict) and isinstance(p.get("gross_total"), int)
+    )
 
     return result
 
