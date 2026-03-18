@@ -1,7 +1,6 @@
 import os
 import base64
 import json
-import logging
 from io import BytesIO
 from google import genai
 from google.genai import types
@@ -10,7 +9,6 @@ from PIL import Image, ImageOps
 client = genai.Client(
 api_key=os.environ.get("GEMINI_API_KEY")
 )
-logger = logging.getLogger(__name__)
 
 MODEL_PRIMARY = "gemini-2.5-flash"
 MODEL_FAST = "gemini-2.5-flash"
@@ -22,8 +20,6 @@ OUTPUT CONTRACT (MUST FOLLOW EXACTLY):
 - Do not wrap JSON in markdown.
 - Do not use ```json fences.
 - Do not include explanation before or after JSON.
-- Do not truncate output.
-- Ensure all JSON arrays/objects/strings are properly closed.
 
 SCORECARD LAYOUT (columns left to right):
 NAME | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | OUT | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | IN | TOT | HCP | NET
@@ -143,89 +139,25 @@ def get_image_media_type(image_path):
 
 
 def _parse_json_response(raw_text):
-    raw_text = raw_text or ""
-    cleaned_text, had_markdown_wrapper = _strip_markdown_fences(raw_text)
-
+    if raw_text.startswith("```json"):
+        raw_text = raw_text[7:]
+    if raw_text.startswith("```"):
+        raw_text = raw_text[3:]
+    if raw_text.endswith("```"):
+        raw_text = raw_text[:-3]
+    raw_text = raw_text.strip()
+    json_start = raw_text.find('{')
+    json_end = raw_text.rfind('}')
+    if json_start >= 0 and json_end > json_start:
+        raw_text = raw_text[json_start:json_end + 1]
     try:
-        parsed = json.loads(cleaned_text)
-        return parsed, {
-            "parse_ok": True,
-            "parse_stage": "success",
-            "had_markdown_wrapper": had_markdown_wrapper,
-            "cleaned_text": cleaned_text,
-            "likely_truncated": False,
-        }
-    except json.JSONDecodeError as err:
-        cleaned_len = len(cleaned_text)
-        cleaned_tail = cleaned_text[-200:] if cleaned_text else ""
-        likely_truncated = _looks_truncated_json(cleaned_text)
-        parse_stage = "truncated_json" if likely_truncated else "json_decode"
-
-        if had_markdown_wrapper:
-            logger.warning("OCR markdown wrapper detected and stripped before JSON parsing.")
-        logger.error(
-            "OCR JSON parse failed at stage=%s len=%s tail=%r",
-            parse_stage,
-            cleaned_len,
-            cleaned_tail
-        )
-
-        return None, {
-            "parse_ok": False,
-            "parse_stage": parse_stage,
-            "had_markdown_wrapper": had_markdown_wrapper,
-            "cleaned_text": cleaned_text,
-            "likely_truncated": likely_truncated,
-            "json_error": str(err),
-        }
-
-
-def _strip_markdown_fences(text):
-    text = (text or "").strip()
-    had_wrapper = False
-
-    if text.startswith("```json"):
-        had_wrapper = True
-        text = text[7:].lstrip()
-    elif text.startswith("```"):
-        had_wrapper = True
-        text = text[3:].lstrip()
-
-    if text.endswith("```"):
-        had_wrapper = True
-        text = text[:-3].rstrip()
-
-    return text.strip(), had_wrapper
-
-
-def _looks_truncated_json(text):
-    open_braces = 0
-    open_brackets = 0
-    in_string = False
-    escape = False
-
-    for ch in text:
-        if escape:
-            escape = False
-            continue
-        if ch == '\\':
-            escape = True
-            continue
-        if ch == '"':
-            in_string = not in_string
-            continue
-        if in_string:
-            continue
-        if ch == '{':
-            open_braces += 1
-        elif ch == '}':
-            open_braces -= 1
-        elif ch == '[':
-            open_brackets += 1
-        elif ch == ']':
-            open_brackets -= 1
-
-    return in_string or open_braces > 0 or open_brackets > 0
+        return json.loads(raw_text)
+    except json.JSONDecodeError:
+        try:
+            repaired = _repair_truncated_json(raw_text)
+            return json.loads(repaired)
+        except (json.JSONDecodeError, Exception):
+            raise json.JSONDecodeError("Could not parse or repair JSON", raw_text[:200], 0)
 
 
 def _repair_truncated_json(text):
@@ -349,21 +281,16 @@ def ocr_scorecard(image_path):
         media_type = normalized_media_type or get_image_media_type(image_path)
 
         raw_text = _call_gemini(SCORECARD_PROMPT, image_bytes, media_type, model=MODEL_PRIMARY)
-        result, parse_meta = _parse_json_response(raw_text)
-        if not parse_meta["parse_ok"]:
-            return {
-                "success": False,
-                "confidence": "LOW",
-                "error": f"Failed to parse OCR response: {parse_meta.get('json_error', 'unknown decode failure')}",
-                "issues": [
-                    "JSON parse error from AI response",
-                    "Markdown wrapper detected and stripped before parse" if parse_meta.get("had_markdown_wrapper") else "No markdown wrapper detected",
-                    "Likely truncated or incomplete JSON response" if parse_meta.get("likely_truncated") else "JSON decode failed after cleanup",
-                ],
-                "players": [],
-                "raw_response": raw_text,
-                "parse_stage": parse_meta.get("parse_stage", "json_decode"),
-            }
+        try:
+            result = _parse_json_response(raw_text)
+        except json.JSONDecodeError:
+            import time as _t0
+            _t0.sleep(3)
+            raw_text = _call_gemini(
+                SCORECARD_PROMPT + "\n\nIMPORTANT: STRICT JSON ONLY. No markdown, no code fences, no prose.",
+                image_bytes, media_type, model=MODEL_PRIMARY
+            )
+            result = _parse_json_response(raw_text)
 
         par = result.get("par", [])
         if len(par) != 18:
@@ -494,17 +421,22 @@ def ocr_scorecard(image_path):
                     f"(diff={computed - wt}). Hole scores are authoritative."
                 )
 
-        result["success"] = True
         return result
 
+    except json.JSONDecodeError as e:
+        return {
+            "error": f"Failed to parse OCR response: {str(e)}",
+            "raw_response": raw_text if 'raw_text' in dir() else "No response",
+            "players": [],
+            "confidence": "LOW",
+            "issues": ["JSON parse error from AI response"]
+        }
     except Exception as e:
         return {
-            "success": False,
             "error": f"OCR processing failed: {str(e)}",
             "players": [],
             "confidence": "LOW",
-            "issues": [str(e)],
-            "parse_stage": "markdown_cleanup"
+            "issues": [str(e)]
         }
 
 
@@ -643,7 +575,7 @@ def _programmatic_crosscheck(result):
 def process_ocr_for_round(image_path, round_data):
     result = ocr_scorecard(image_path)
 
-    if result.get("success") is False:
+    if result.get("error") and not result.get("players"):
         return result
 
     processed_players = []
