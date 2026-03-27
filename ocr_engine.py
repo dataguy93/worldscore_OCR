@@ -33,7 +33,7 @@ The PAR row is PRINTED text (not handwritten), labeled "Par" or "PAR". Read each
 VERIFY: front 9 pars MUST sum to printed OUT. Back 9 pars MUST sum to printed IN. If not, re-read.
 
 STEP 1B — HOLE HANDICAP ROW (STROKE INDEX):
-Look for a PRINTED row labeled "Handicap", "HDCP", "HCP", "Ventaja", or "Ventaja Caballeros". This row ranks each hole's difficulty from 1 (hardest) to 18 (easiest). Read all 18 values into the "hole_handicaps" array. Each value MUST be an integer 1-18 with no duplicates. If this row is not present on the scorecard, set "hole_handicaps" to null.
+Look for a PRINTED row that indicates the MEN'S hole-by-hole difficulty ranking. Common labels include "Ventaja Caballeros", "Men's Handicap", "Handicap", "HDCP", "HCP", or "Ventaja". If the scorecard has BOTH a men's row ("Ventaja Caballeros" / "Men's Handicap") and a women's row ("Ventaja Damas" / "Ladies Handicap"), use the MEN'S row. This row ranks each hole's difficulty from 1 (hardest) to 18 (easiest). Read all 18 values into the "hole_handicaps" array. Each value MUST be an integer 1-18 with no duplicates. If this row is not present on the scorecard, set "hole_handicaps" to null.
 
 STEP 2 — PLAYER ROWS:
 For each player (handwritten row):
