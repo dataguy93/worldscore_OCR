@@ -32,6 +32,9 @@ STEP 1 — PAR ROW:
 The PAR row is PRINTED text (not handwritten), labeled "Par" or "PAR". Read each of the 18 par values (each MUST be 3, 4, or 5). Also read printed OUT and IN subtotals.
 VERIFY: front 9 pars MUST sum to printed OUT. Back 9 pars MUST sum to printed IN. If not, re-read.
 
+STEP 1B — HOLE HANDICAP ROW (STROKE INDEX):
+Look for a PRINTED row that indicates the MEN'S hole-by-hole difficulty ranking. Common labels include "Ventaja Caballeros", "Men's Handicap", "Handicap", "HDCP", "HCP", or "Ventaja". If the scorecard has BOTH a men's row ("Ventaja Caballeros" / "Men's Handicap") and a women's row ("Ventaja Damas" / "Ladies Handicap"), use the MEN'S row. This row ranks each hole's difficulty from 1 (hardest) to 18 (easiest). Read all 18 values into the "hole_handicaps" array. Each value MUST be an integer 1-18 with no duplicates. If this row is not present on the scorecard, set "hole_handicaps" to null.
+
 STEP 2 — PLAYER ROWS:
 For each player (handwritten row):
 - Read NAME from leftmost column.
@@ -55,7 +58,7 @@ STEP 3 — HANDWRITING TIPS:
 - HCP column: a single vertical stroke or mark is 1, not 0. HCP of 0 (scratch golfer) is rare — if you see any mark at all in the HCP cell, it is most likely a number (1, 2, etc.), not zero.
 
 Return ONLY compact JSON (no extra whitespace):
-{"course_name":"name or null","par":[18 ints],"par_front_9_total":N,"par_back_9_total":N,"players":[{"name":"str","holes":[18 ints],"handicap":N_or_null,"front_9_total":N,"back_9_total":N,"gross_total":N,"notes":"str"}],"confidence":"HIGH"|"MEDIUM"|"LOW","issues":["str"],"card_type":"STANDARD_18"|"FRONT_9"|"BACK_9"|"OTHER","low_confidence_holes":[{"player":"str","hole":N,"extracted":N,"reason":"str"}]}"""
+{"course_name":"name or null","par":[18 ints],"par_front_9_total":N,"par_back_9_total":N,"hole_handicaps":[18 ints] or null,"players":[{"name":"str","holes":[18 ints],"handicap":N_or_null,"front_9_total":N,"back_9_total":N,"gross_total":N,"notes":"str"}],"confidence":"HIGH"|"MEDIUM"|"LOW","issues":["str"],"card_type":"STANDARD_18"|"FRONT_9"|"BACK_9"|"OTHER","low_confidence_holes":[{"player":"str","hole":N,"extracted":N,"reason":"str"}]}"""
 
 
 def strip_subtotal_columns(values):
@@ -96,6 +99,54 @@ def strip_subtotal_columns(values):
 
     if len(values) > 18:
         return values[:9] + values[len(values)-9:]
+    return values
+
+
+def _strip_handicap_subtotals(values):
+    """Remove OUT/IN/TOT positions from a hole handicap array.
+
+    Unlike scores, handicap values (1-18) can't be distinguished from
+    subtotals by magnitude.  Instead, remove values at the known subtotal
+    positions (index 9 = OUT, index 19 = IN) and try every combination
+    until we get exactly 18 unique values in range 1-18.
+    """
+    if not values or not isinstance(values, list):
+        return values
+    if len(values) == 18:
+        return values
+
+    # 21 elements: OUT at 9, IN at 19, TOT at 20
+    if len(values) == 21:
+        candidate = values[:9] + values[10:19]
+        if len(set(v for v in candidate if v is not None and 1 <= v <= 18)) == 18:
+            return candidate
+
+    # 20 elements: likely OUT at 9 and IN at 19 (no TOT), or missing one
+    if len(values) == 20:
+        for drop1, drop2 in [(9, 19), (9, 18), (9, 17)]:
+            candidate = [v for i, v in enumerate(values) if i not in (drop1, drop2)]
+            valid = [v for v in candidate if v is not None and 1 <= v <= 18]
+            if len(valid) == 18 and len(set(valid)) == 18:
+                return candidate
+
+    # 19 elements: one subtotal column (OUT or IN)
+    if len(values) == 19:
+        for drop in [9, 18]:
+            candidate = values[:drop] + values[drop + 1:]
+            valid = [v for v in candidate if v is not None and 1 <= v <= 18]
+            if len(valid) == 18 and len(set(valid)) == 18:
+                return candidate
+
+    # Fallback: filter to only valid 1-18 values and take first 18 unique
+    seen = set()
+    filtered = []
+    for v in values:
+        if v is not None and 1 <= v <= 18 and v not in seen:
+            seen.add(v)
+            filtered.append(v)
+    if len(filtered) == 18:
+        return filtered
+
     return values
 
 
@@ -296,6 +347,25 @@ def ocr_scorecard(image_path):
         if len(par) != 18:
             par = strip_subtotal_columns(par)
             result["par"] = par
+
+        hole_handicaps = result.get("hole_handicaps")
+        if hole_handicaps is not None:
+            if isinstance(hole_handicaps, list):
+                hole_handicaps = [int(v) if isinstance(v, (int, float)) else None for v in hole_handicaps]
+                if len(hole_handicaps) != 18:
+                    hole_handicaps = _strip_handicap_subtotals(hole_handicaps)
+                valid_vals = [v for v in hole_handicaps if v is not None and 1 <= v <= 18]
+                if len(valid_vals) == 18 and len(set(valid_vals)) == 18:
+                    result["hole_handicaps"] = valid_vals
+                else:
+                    if "issues" not in result:
+                        result["issues"] = []
+                    result["issues"].append(
+                        f"Warning: hole_handicaps extracted but invalid (got {hole_handicaps}). Discarding."
+                    )
+                    result["hole_handicaps"] = None
+            else:
+                result["hole_handicaps"] = None
 
         for player in result.get("players", []):
             if player.get("name"):
