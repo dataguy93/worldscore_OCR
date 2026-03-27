@@ -104,7 +104,7 @@ def _normalize_image_orientation(image_bytes):
         img = Image.open(BytesIO(image_bytes))
         img = ImageOps.exif_transpose(img)
         w, h = img.size
-        if h > w:
+        if h > w * 1.5:
             img = img.rotate(90, expand=True)
             w, h = img.size
         MAX_DIM = 3000
@@ -421,6 +421,8 @@ def ocr_scorecard(image_path):
                     f"(diff={computed - wt}). Hole scores are authoritative."
                 )
 
+        result = _enrich_holes_with_confidence(result)
+
         return result
 
     except json.JSONDecodeError as e:
@@ -522,18 +524,6 @@ def _fix_swapped_subtotals(result):
     return result
 
 
-DIGIT_CONFUSIONS = {
-    1: [7],
-    3: [5, 8],
-    4: [9, 7],
-    5: [6, 3],
-    6: [5, 8],
-    7: [1, 4],
-    8: [3, 6],
-    9: [4],
-}
-
-
 def _programmatic_crosscheck(result):
     par = result.get("par", [])
     if "issues" not in result:
@@ -572,45 +562,51 @@ def _programmatic_crosscheck(result):
     return result
 
 
-def process_ocr_for_round(image_path, round_data):
-    result = ocr_scorecard(image_path)
+def _enrich_holes_with_confidence(result):
+    par = result.get("par", [])
+    low_conf_list = result.get("low_confidence_holes", [])
+    flagged_list = result.get("flagged_holes", [])
 
-    if result.get("error") and not result.get("players"):
-        return result
+    low_conf_map = {}
+    for lc in low_conf_list:
+        key = (_normalize_name(lc.get("player", "")), lc.get("hole"))
+        low_conf_map[key] = lc
 
-    processed_players = []
+    flagged_map = {}
+    for fh in flagged_list:
+        key = (_normalize_name(fh.get("player", "")), fh.get("hole"))
+        flagged_map[key] = fh
+
     for player in result.get("players", []):
+        name = player.get("name", "?")
+        name_norm = _normalize_name(name)
         holes = player.get("holes", [])
+        enriched = []
+        for i, score in enumerate(holes):
+            hole_num = i + 1
+            hole_par = par[i] if i < len(par) else None
+            lc = low_conf_map.get((name_norm, hole_num))
+            fg = flagged_map.get((name_norm, hole_num))
 
-        valid_holes = [h for h in holes if h is not None]
-        null_count = holes.count(None)
+            if lc:
+                confidence_level = "low"
+                confidence_val = 0.3
+            elif fg:
+                confidence_level = "low"
+                confidence_val = 0.4
+            elif score is None:
+                confidence_level = "low"
+                confidence_val = 0.0
+            else:
+                confidence_level = "high"
+                confidence_val = 0.95
 
-        calculated_gross = sum(valid_holes) if valid_holes else 0
+            enriched.append({
+                "score": score,
+                "par": hole_par,
+                "confidence_level": confidence_level,
+                "confidence": confidence_val,
+            })
+        player["holes"] = enriched
 
-        if player.get("gross_total") and valid_holes:
-            if player["gross_total"] != calculated_gross and null_count == 0:
-                if "issues" not in result:
-                    result["issues"] = []
-                result["issues"].append(
-                    f"{player['name']}: Written total ({player['gross_total']}) "
-                    f"doesn't match hole sum ({calculated_gross})"
-                )
-
-        while len(holes) < 18:
-            holes.append(None)
-
-        readable_holes = [h for h in holes[:18] if h is not None]
-        calculated_gross = sum(readable_holes) if readable_holes else 0
-
-        processed_player = {
-            "name": player.get("name", "Unknown"),
-            "holes": holes[:18],
-            "gross_total": calculated_gross,
-            "handicap": player.get("handicap"),
-            "null_holes": null_count,
-            "ocr_notes": player.get("notes", "")
-        }
-        processed_players.append(processed_player)
-
-    result["processed_players"] = processed_players
     return result

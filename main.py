@@ -5,7 +5,7 @@ import tempfile
 
 from flask import Flask, jsonify, request
 
-from ocr_engine import ocr_scorecard, process_ocr_for_round
+from ocr_engine import ocr_scorecard
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_UPLOAD_MB", "20")) * 1024 * 1024
@@ -20,7 +20,6 @@ def add_cors_headers(response):
 
 
 @app.route("/ocr", methods=["OPTIONS"])
-@app.route("/ocr/round", methods=["OPTIONS"])
 def ocr_options():
     return ("", 204)
 
@@ -82,33 +81,6 @@ def ocr_endpoint():
         return jsonify({"error": f"OCR request failed: {exc}"}), 500
     finally:
         if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
-
-
-@app.post("/ocr/round")
-def ocr_round_endpoint():
-    image_file = request.files.get("image")
-    body = request.get_json(silent=True) or {}
-    image_base64 = body.get("image_base64")
-    round_data = request.form.get("round_data") or body.get("round_data")
-
-    if image_file is None and not image_base64:
-        return jsonify({"error": "Provide image data via multipart/form-data field 'image' or JSON field 'image_base64'."}), 400
-
-    tmp_path = None
-    try:
-        parsed_round_data = {}
-        if round_data:
-            parsed_round_data = json.loads(round_data)
-
-        tmp_path = _create_temp_image_file(image_file=image_file, image_base64=image_base64)
-
-        result = process_ocr_for_round(tmp_path, parsed_round_data)
-        return jsonify(result)
-    except Exception as exc:
-        return jsonify({"error": f"Round OCR request failed: {exc}"}), 500
-    finally:
-        if "tmp_path" in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
 
