@@ -102,6 +102,54 @@ def strip_subtotal_columns(values):
     return values
 
 
+def _strip_handicap_subtotals(values):
+    """Remove OUT/IN/TOT positions from a hole handicap array.
+
+    Unlike scores, handicap values (1-18) can't be distinguished from
+    subtotals by magnitude.  Instead, remove values at the known subtotal
+    positions (index 9 = OUT, index 19 = IN) and try every combination
+    until we get exactly 18 unique values in range 1-18.
+    """
+    if not values or not isinstance(values, list):
+        return values
+    if len(values) == 18:
+        return values
+
+    # 21 elements: OUT at 9, IN at 19, TOT at 20
+    if len(values) == 21:
+        candidate = values[:9] + values[10:19]
+        if len(set(v for v in candidate if v is not None and 1 <= v <= 18)) == 18:
+            return candidate
+
+    # 20 elements: likely OUT at 9 and IN at 19 (no TOT), or missing one
+    if len(values) == 20:
+        for drop1, drop2 in [(9, 19), (9, 18), (9, 17)]:
+            candidate = [v for i, v in enumerate(values) if i not in (drop1, drop2)]
+            valid = [v for v in candidate if v is not None and 1 <= v <= 18]
+            if len(valid) == 18 and len(set(valid)) == 18:
+                return candidate
+
+    # 19 elements: one subtotal column (OUT or IN)
+    if len(values) == 19:
+        for drop in [9, 18]:
+            candidate = values[:drop] + values[drop + 1:]
+            valid = [v for v in candidate if v is not None and 1 <= v <= 18]
+            if len(valid) == 18 and len(set(valid)) == 18:
+                return candidate
+
+    # Fallback: filter to only valid 1-18 values and take first 18 unique
+    seen = set()
+    filtered = []
+    for v in values:
+        if v is not None and 1 <= v <= 18 and v not in seen:
+            seen.add(v)
+            filtered.append(v)
+    if len(filtered) == 18:
+        return filtered
+
+    return values
+
+
 def _normalize_image_orientation(image_bytes):
     try:
         img = Image.open(BytesIO(image_bytes))
@@ -305,7 +353,7 @@ def ocr_scorecard(image_path):
             if isinstance(hole_handicaps, list):
                 hole_handicaps = [int(v) if isinstance(v, (int, float)) else None for v in hole_handicaps]
                 if len(hole_handicaps) != 18:
-                    hole_handicaps = strip_subtotal_columns(hole_handicaps)
+                    hole_handicaps = _strip_handicap_subtotals(hole_handicaps)
                 valid_vals = [v for v in hole_handicaps if v is not None and 1 <= v <= 18]
                 if len(valid_vals) == 18 and len(set(valid_vals)) == 18:
                     result["hole_handicaps"] = valid_vals
