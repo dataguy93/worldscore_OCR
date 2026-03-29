@@ -477,6 +477,7 @@ def ocr_scorecard(image_path):
             result["par"] = par
 
         result = _programmatic_crosscheck(result)
+        result = _triangulate_subtotals(result)
 
         for p in result.get("players", []):
             holes = p.get("holes", [])
@@ -628,6 +629,100 @@ def _programmatic_crosscheck(result):
 
     if flagged_holes:
         result["flagged_holes"] = flagged_holes
+
+    return result
+
+
+def _triangulate_subtotals(result):
+    """Cross-validate front/back subtotals against gross total to pinpoint
+    which half of the card contains an error.
+
+    Three constraints should hold:
+      1. sum(holes[0:9])  == written front_9_total
+      2. sum(holes[9:18]) == written back_9_total
+      3. front_9_total + back_9_total == written gross_total
+
+    When two of three agree the odd one out identifies the error location.
+    """
+    if "issues" not in result:
+        result["issues"] = []
+
+    for player in result.get("players", []):
+        holes = player.get("holes", [])
+        name = player.get("name", "?")
+
+        written_front = player.get("front_9_total")
+        written_back = player.get("back_9_total")
+        written_gross = player.get("written_gross_total")
+
+        # Need all three written values to triangulate
+        if written_front is None or written_back is None or written_gross is None:
+            continue
+
+        front_holes = [h for h in holes[:9] if h is not None]
+        back_holes = [h for h in holes[9:18] if h is not None]
+
+        # Need complete hole data for both halves
+        if len(front_holes) != 9 or len(back_holes) != 9:
+            continue
+
+        computed_front = sum(front_holes)
+        computed_back = sum(back_holes)
+
+        front_match = computed_front == written_front
+        back_match = computed_back == written_back
+        subtotals_match_gross = (written_front + written_back) == written_gross
+
+        # All match — nothing to flag
+        if front_match and back_match:
+            continue
+
+        if subtotals_match_gross and not front_match and not back_match:
+            result["issues"].append(
+                f"Triangulation: {name} written subtotals are internally consistent "
+                f"(F9={written_front} + B9={written_back} = {written_gross}) "
+                f"but hole scores disagree in both halves "
+                f"(computed F9={computed_front}, B9={computed_back}). "
+                f"Multiple holes may be misread."
+            )
+        elif subtotals_match_gross and not front_match:
+            diff = computed_front - written_front
+            result["issues"].append(
+                f"Triangulation: {name} error is in FRONT 9 — "
+                f"computed {computed_front} vs written {written_front} (diff={diff:+d}). "
+                f"Back 9 and gross total are consistent."
+            )
+        elif subtotals_match_gross and not back_match:
+            diff = computed_back - written_back
+            result["issues"].append(
+                f"Triangulation: {name} error is in BACK 9 — "
+                f"computed {computed_back} vs written {written_back} (diff={diff:+d}). "
+                f"Front 9 and gross total are consistent."
+            )
+        elif front_match and back_match and not subtotals_match_gross:
+            # Hole scores and subtotals agree; written gross is wrong
+            result["issues"].append(
+                f"Triangulation: {name} hole scores match both subtotals "
+                f"(F9={computed_front}, B9={computed_back}) but written gross "
+                f"{written_gross} != {written_front} + {written_back} = "
+                f"{written_front + written_back}. Written gross total appears incorrect."
+            )
+        elif front_match and not back_match and not subtotals_match_gross:
+            diff = computed_back - written_back
+            result["issues"].append(
+                f"Triangulation: {name} error is in BACK 9 — "
+                f"front 9 holes match subtotal ({computed_front}) but "
+                f"back 9 computed {computed_back} vs written {written_back} (diff={diff:+d}), "
+                f"and gross total is also inconsistent."
+            )
+        elif back_match and not front_match and not subtotals_match_gross:
+            diff = computed_front - written_front
+            result["issues"].append(
+                f"Triangulation: {name} error is in FRONT 9 — "
+                f"back 9 holes match subtotal ({computed_back}) but "
+                f"front 9 computed {computed_front} vs written {written_front} (diff={diff:+d}), "
+                f"and gross total is also inconsistent."
+            )
 
     return result
 
