@@ -673,7 +673,6 @@ def _enrich_holes_with_confidence(result):
 
             enriched.append({
                 "score": score,
-                "par": hole_par,
                 "confidence_level": confidence_level,
                 "confidence": confidence_val,
             })
