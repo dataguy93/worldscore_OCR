@@ -478,6 +478,7 @@ def ocr_scorecard(image_path):
 
         result = _programmatic_crosscheck(result)
         result = _triangulate_subtotals(result)
+        result = _pinpoint_suspect_holes(result)
 
         for p in result.get("players", []):
             holes = p.get("holes", [])
@@ -723,6 +724,108 @@ def _triangulate_subtotals(result):
                 f"front 9 computed {computed_front} vs written {written_front} (diff={diff:+d}), "
                 f"and gross total is also inconsistent."
             )
+
+    return result
+
+
+def _pinpoint_suspect_holes(result):
+    """When a subtotal mismatch is small (1-3 strokes), identify which
+    specific hole(s) could account for the discrepancy.
+
+    For each mismatched half, try adjusting each hole by the delta.  If the
+    adjusted value is a plausible golf score (1-10) and different from the
+    original, it's a candidate.  A single candidate is a strong signal; multiple
+    candidates are all flagged for manual review.
+    """
+    par = result.get("par", [])
+    if "issues" not in result:
+        result["issues"] = []
+    if "flagged_holes" not in result:
+        result["flagged_holes"] = []
+
+    for player in result.get("players", []):
+        holes = player.get("holes", [])
+        name = player.get("name", "?")
+
+        written_front = player.get("front_9_total")
+        written_back = player.get("back_9_total")
+
+        halves = []
+        if written_front is not None:
+            front_valid = [h for h in holes[:9] if h is not None]
+            if len(front_valid) == 9:
+                halves.append(("front 9", 0, 9, sum(front_valid), written_front))
+        if written_back is not None:
+            back_valid = [h for h in holes[9:18] if h is not None]
+            if len(back_valid) == 9:
+                halves.append(("back 9", 9, 18, sum(back_valid), written_back))
+
+        for half_label, start, end, computed, written in halves:
+            diff = computed - written  # positive = OCR read too high
+            if diff == 0 or abs(diff) > 3:
+                continue
+
+            candidates = []
+            for i in range(start, end):
+                score = holes[i]
+                if score is None:
+                    continue
+                corrected = score - diff
+                if corrected < 1 or corrected > 10 or corrected == score:
+                    continue
+
+                hole_par = par[i] if i < len(par) else 4
+                # Prefer candidates closer to par (more plausible)
+                distance_from_par = abs(corrected - hole_par)
+                candidates.append({
+                    "index": i,
+                    "hole": i + 1,
+                    "current": score,
+                    "suggested": corrected,
+                    "par": hole_par,
+                    "distance_from_par": distance_from_par,
+                })
+
+            if not candidates:
+                continue
+
+            # Sort by plausibility: closer to par = more likely correction
+            candidates.sort(key=lambda c: c["distance_from_par"])
+
+            if len(candidates) == 1:
+                c = candidates[0]
+                result["issues"].append(
+                    f"Suspect hole: {name} hole {c['hole']} — score {c['current']} "
+                    f"likely misread as {c['suggested']} "
+                    f"(would fix {half_label} subtotal, par={c['par']})"
+                )
+                result["flagged_holes"].append({
+                    "player": name,
+                    "hole": c["hole"],
+                    "score": c["current"],
+                    "reason": f"Subtotal mismatch suggests {c['current']}→{c['suggested']} "
+                              f"(diff={diff:+d} in {half_label})",
+                    "suggested_correction": c["suggested"],
+                })
+            else:
+                top = candidates[:3]  # show at most 3 candidates
+                suspects = ", ".join(
+                    f"hole {c['hole']}({c['current']}→{c['suggested']})"
+                    for c in top
+                )
+                result["issues"].append(
+                    f"Suspect holes: {name} {half_label} off by {diff:+d} — "
+                    f"candidates: {suspects}"
+                )
+                for c in top:
+                    result["flagged_holes"].append({
+                        "player": name,
+                        "hole": c["hole"],
+                        "score": c["current"],
+                        "reason": f"Subtotal mismatch candidate: {c['current']}→{c['suggested']} "
+                                  f"(diff={diff:+d} in {half_label})",
+                        "suggested_correction": c["suggested"],
+                    })
 
     return result
 
