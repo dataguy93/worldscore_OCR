@@ -47,6 +47,15 @@ For each player (handwritten row):
 - If "+1"/"-1"/"E"/"0" notation is used instead of raw strokes, convert to actual strokes using par.
 - Card may be UPSIDE DOWN or ROTATED — use PAR label and hole numbers to orient.
 
+STEP 2B — PUTTS PER HOLE:
+For each player, look for a SMALL number written in the BOTTOM-RIGHT corner of each hole's score cell. This is the number of putts for that hole. It is smaller and offset from the main score (which is centered in the cell).
+- Read exactly 18 putt values into the "putts" array (one per hole), in the same order as the holes.
+- Putts are typically 0, 1, 2, or 3. Values of 0 are VALID for putts (e.g., chip-in). Values above 4 are rare but possible.
+- If NO putt number is written in a cell, use null for that hole.
+- If no putts are written on the scorecard at all, set "putts" to null (not an array of nulls).
+- Do NOT confuse the main score with the putt count. The main score is larger and centered; the putt count is smaller and in the bottom-right corner.
+- Putts must ALWAYS be less than or equal to the hole score. If a putt value appears >= the score, re-examine carefully.
+
 STEP 3 — HANDWRITING TIPS:
 - "4" vs "9": 4 has open angular top, 9 has closed round loop
 - "5" vs "6": 5 has flat/angular top stroke, 6 has rounded top
@@ -58,7 +67,7 @@ STEP 3 — HANDWRITING TIPS:
 - HCP column: a single vertical stroke or mark is 1, not 0. HCP of 0 (scratch golfer) is rare — if you see any mark at all in the HCP cell, it is most likely a number (1, 2, etc.), not zero.
 
 Return ONLY compact JSON (no extra whitespace):
-{"course_name":"name or null","par":[18 ints],"par_front_9_total":N,"par_back_9_total":N,"hole_handicaps":[18 ints] or null,"players":[{"name":"str","holes":[18 ints],"handicap":N_or_null,"front_9_total":N,"back_9_total":N,"gross_total":N,"notes":"str"}],"confidence":"HIGH"|"MEDIUM"|"LOW","issues":["str"],"card_type":"STANDARD_18"|"FRONT_9"|"BACK_9"|"OTHER","low_confidence_holes":[{"player":"str","hole":N,"extracted":N,"reason":"str"}]}"""
+{"course_name":"name or null","par":[18 ints],"par_front_9_total":N,"par_back_9_total":N,"hole_handicaps":[18 ints] or null,"players":[{"name":"str","holes":[18 ints],"putts":[18 ints_or_nulls] or null,"handicap":N_or_null,"front_9_total":N,"back_9_total":N,"gross_total":N,"total_putts":N_or_null,"notes":"str"}],"confidence":"HIGH"|"MEDIUM"|"LOW","issues":["str"],"card_type":"STANDARD_18"|"FRONT_9"|"BACK_9"|"OTHER","low_confidence_holes":[{"player":"str","hole":N,"extracted":N,"reason":"str"}]}"""
 
 
 def strip_subtotal_columns(values):
@@ -391,6 +400,28 @@ def ocr_scorecard(image_path):
                     cleaned_holes.append(None)
             player["holes"] = cleaned_holes
 
+            putts = player.get("putts")
+            if putts is not None and isinstance(putts, list):
+                cleaned_putts = []
+                for p in putts:
+                    if p is None:
+                        cleaned_putts.append(None)
+                    elif isinstance(p, (int, float)):
+                        cleaned_putts.append(int(p))
+                    else:
+                        cleaned_putts.append(None)
+                if len(cleaned_putts) > 18:
+                    cleaned_putts = strip_subtotal_columns(cleaned_putts)
+                if len(cleaned_putts) < 18:
+                    while len(cleaned_putts) < 18:
+                        cleaned_putts.append(None)
+                if all(v is None for v in cleaned_putts):
+                    player["putts"] = None
+                else:
+                    player["putts"] = cleaned_putts[:18]
+            else:
+                player["putts"] = None
+
             if player.get("handicap") is not None:
                 try:
                     player["handicap"] = int(player["handicap"])
@@ -626,6 +657,27 @@ def _programmatic_crosscheck(result):
         player["holes"] = holes
         player["gross_total"] = sum(h for h in holes if h is not None)
 
+        putts = player.get("putts")
+        if putts and isinstance(putts, list):
+            for i in range(min(len(holes), len(putts))):
+                if putts[i] is None or holes[i] is None:
+                    continue
+                if putts[i] > holes[i]:
+                    result["issues"].append(
+                        f"Flag: {name} hole {i+1} putts ({putts[i]}) > score ({holes[i]}) — verify"
+                    )
+                    flagged_holes.append({"player": name, "hole": i+1, "score": holes[i],
+                                          "reason": f"Putts ({putts[i]}) exceeds score ({holes[i]})"})
+                elif putts[i] > 4:
+                    result["issues"].append(
+                        f"Flag: {name} hole {i+1} has {putts[i]} putts — unusually high, verify"
+                    )
+            valid_putts = [p for p in putts if p is not None]
+            if valid_putts:
+                player["total_putts"] = sum(valid_putts)
+            else:
+                player["total_putts"] = None
+
     if flagged_holes:
         result["flagged_holes"] = flagged_holes
 
@@ -651,6 +703,7 @@ def _enrich_holes_with_confidence(result):
         name = player.get("name", "?")
         name_norm = _normalize_name(name)
         holes = player.get("holes", [])
+        putts = player.get("putts")
         enriched = []
         for i, score in enumerate(holes):
             hole_num = i + 1
@@ -671,11 +724,14 @@ def _enrich_holes_with_confidence(result):
                 confidence_level = "high"
                 confidence_val = 0.95
 
-            enriched.append({
+            hole_data = {
                 "score": score,
                 "confidence_level": confidence_level,
                 "confidence": confidence_val,
-            })
+            }
+            if putts is not None:
+                hole_data["putts"] = putts[i] if i < len(putts) else None
+            enriched.append(hole_data)
         player["holes"] = enriched
 
     return result
